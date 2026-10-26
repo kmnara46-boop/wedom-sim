@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>웨돔 스타일 모의매매</title>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="data.js"></script>
+<script src="live.js" onerror="void 0"></script>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--mute:#8b93a3;--up:#26a69a;--down:#ef5350;--acc:#5e8bff;--warn:#f5a623}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,"Segoe UI","Malgun Gothic",sans-serif}
+header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap}
+header h1{font-size:17px;margin:0}
+nav button{background:none;border:0;color:var(--mute);padding:8px 12px;font-size:14px;cursor:pointer;border-radius:6px}
+nav button.on{color:var(--text);background:var(--panel)}
+.status{margin-left:auto;color:var(--mute);font-size:12px}
+main{padding:16px 20px;max-width:1500px;margin:0 auto}
+.tab{display:none}.tab.on{display:block}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;flex:1;min-width:220px}
+.card h3{margin:0 0 8px;font-size:13px;color:var(--mute);font-weight:600}
+.big{font-size:22px;font-weight:700}
+.up{color:var(--up)}.down{color:var(--down)}.mute{color:var(--mute)}.warn{color:var(--warn)}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:none;border:0;color:var(--mute);padding:6px 12px;cursor:pointer}
+.seg button.on{background:var(--acc);color:#fff}
+.toolbar{display:flex;gap:10px;align-items:center;margin:14px 0 8px;flex-wrap:wrap}
+.chart{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;position:relative}
+.legend{position:absolute;left:10px;top:6px;z-index:3;font-size:12px;color:var(--mute);pointer-events:none}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{color:var(--mute);font-weight:600;position:sticky;top:0;background:var(--panel)}
+.scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line);margin-right:4px;color:var(--mute)}
+.pill.L{color:var(--up);border-color:var(--up)}.pill.S{color:var(--down);border-color:var(--down)}
+.cond{display:grid;grid-template-columns:auto auto auto;gap:2px 12px;font-size:12px}
+.ok{color:var(--up);font-weight:700}
+.news-item{padding:10px 12px;border-bottom:1px solid var(--line)}
+.news-item a{color:var(--text);text-decoration:none;font-weight:600}
+.news-item a:hover{text-decoration:underline}
+.news-item .imp{color:var(--mute);font-size:12px;margin-top:4px;white-space:normal}
+input,select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+label{color:var(--mute);font-size:12px}
+.grid-params{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.grid-params div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px}
+.grid-params input{width:100%;margin-top:4px}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:7px 14px;cursor:pointer}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--text)}
+.note{color:var(--mute);font-size:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+h2{font-size:15px;margin:18px 0 8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>웨돔 스타일 모의매매</h1>
+  <nav id="nav">
+    <button data-tab="sim" class="on">모의매매</button>
+    <button data-tab="cmp">웨돔 vs 모의 비교</button>
+    <button data-tab="news">뉴스</button>
+    <button data-tab="bt">백테스트</button>
+    <button data-tab="cfg">전략 설정</button>
+  </nav>
+  <div id="macroBadge" class="pill" style="font-size:13px;padding:4px 12px;cursor:pointer">매크로 리스크 -</div>
+  <div id="regimeBadge" class="pill" style="font-size:13px;padding:4px 12px;cursor:pointer" title="클릭하면 기준과 기록을 볼 수 있어요">BTC 장분위기 계산 중...</div>
+  <div class="status" id="status">로딩 중...</div>
+</header>
+<main>
+<!-- ============ SIM ============ -->
+<section class="tab on" id="tab-sim">
+  <div class="card" id="regimePanel" style="margin-bottom:12px">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div><h3 style="margin:0">BTC 장분위기 (일봉 기준)</h3><div class="big" id="regimeNow">-</div></div>
+      <div class="note" id="regimeDetail" style="flex:1;min-width:280px"></div>
+    </div>
+    <div class="note" style="margin-top:8px">
+      <b>판별 기준</b> (매일 일봉 마감 기준): <span class="up">강세장</span> = 종가가 50일 이동평균 위 + 20일선이 10일 동안 <span id="rgSlopeTxt">3</span>% 넘게 상승 + ADX(14) <span id="rgAdxTxt">25</span> 이상 + 매수 방향성(+DI)이 우세.
+      <span class="down">약세장</span> = 그 반대 (50일선 아래, 20일선 하락, ADX 기준 이상, -DI 우세). 둘 다 아니면 <span class="warn">횡보장</span>.
+      잦은 뒤집힘을 막으려고 새 장분위기가 <span id="rgConfTxt">5</span>일 연속 나와야 전환해요. 기준값은 '전략 설정'에서 바꿀 수 있어요.
+      <br>추세 필터를 3번(기본)으로 두면 <b>횡보장일 때만 웨돔 방식으로 매매</b>하고, 강세장·약세장으로 바뀌면 포지션을 정리하고 쉬어요.
+    </div>
+    <div class="chart" id="regimeChart" style="height:170px;margin-top:8px"><div class="legend">최근 1년 BTC 일봉 종가 · 배경 막대 = 장분위기 (초록 강세 / 주황 횡보 / 빨강 약세)</div></div>
+  </div>
+  <div class="card" id="macroPanel" style="margin-bottom:12px">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div><h3 style="margin:0">매크로·지정학 리스크 점수</h3><div class="big" id="macroNow">-</div></div>
+      <div class="note" id="macroDetail" style="flex:1;min-width:280px"></div>
+    </div>
+    <div class="scroll" style="max-height:none;margin-top:8px"><table id="macroTable"></table></div>
+    <div class="note" style="margin-top:6px">점수 = VIX(주식 공포), OVX(유가 변동성), MOVE(채권 변동성), 브렌트유 20일 상승률을 각각 최근 1년 중 몇 % 위치인지(백분위)로 바꿔 평균낸 값. 0~100, 높을수록 불안. 코인 내부 지표(DVOL, 공포·탐욕)는 참고로만 표시하고 점수엔 넣지 않았어요. 데이터는 PC 자동 갱신(30분마다)과 감시 루틴이 받아와요.</div>
+  </div>
+  <div class="row" id="cards"></div>
+  <div class="toolbar">
+    <div class="seg" id="symSeg"></div>
+    <div class="seg" id="tfSeg"></div>
+    <label><input type="checkbox" id="showWedom" checked> 웨돔 실제 매매 표시</label>
+    <span class="note">▲▼ 모의 진입/추가, ● 익절/정리, ◆ 웨돔 실제</span>
+  </div>
+  <div class="chart" id="mainChart" style="height:460px"><div class="legend" id="mainLegend"></div></div>
+  <div class="chart" id="rsiChart" style="height:120px"><div class="legend">RSI 14 (70/30)</div></div>
+  <div class="chart" id="stChart" style="height:110px"><div class="legend">Stoch RSI (80/20)</div></div>
+  <div class="two">
+    <div>
+      <h2>현재 신호 상태</h2>
+      <div class="row" id="signals"></div>
+    </div>
+    <div>
+      <h2>계좌 곡선 (종목별 $10,000 시작)</h2>
+      <div class="chart" id="eqChart" style="height:260px"><div class="legend" id="eqLegend"></div></div>
+    </div>
+  </div>
+  <h2>모의 매매 내역 (최신순)</h2>
+  <div class="toolbar"><div class="seg" id="actSymSeg"></div><div class="seg" id="actKindSeg"></div><span class="note" id="actCount"></span></div>
+  <div class="scroll"><table id="actTable"></table></div>
+</section>
+
+<!-- ============ COMPARE ============ -->
+<section class="tab" id="tab-cmp">
+  <div class="toolbar"><div class="seg" id="cmpSymSeg"></div><span class="note" id="cmpNote"></span></div>
+  <div class="row" id="cmpCards"></div>
+  <div class="chart" id="cmpChart" style="height:420px"><div class="legend">1시간봉 · ◆ 웨돔 실제 / ▲▼ 모의</div></div>
+  <div class="chart" id="dirChart" style="height:140px"><div class="legend">포지션 방향 (+1 롱 / -1 숏) · 파랑 웨돔, 주황 모의</div></div>
+  <div class="two">
+    <div><h2>웨돔 실제 트레이드</h2><div class="scroll"><table id="wTrades"></table></div></div>
+    <div><h2>모의 트레이드</h2><div class="scroll"><table id="sTrades"></table></div></div>
+  </div>
+  <h2>웨돔 진입·추가 시점별 모의 반응 (±3시간 내 같은 방향 진입 여부)</h2>
+  <div class="scroll"><table id="matchTable"></table></div>
+</section>
+
+<!-- ============ NEWS ============ -->
+<section class="tab" id="tab-news">
+  <div class="row">
+    <div class="card" style="max-width:260px"><h3>공포·탐욕 지수 (실시간)</h3><div class="big" id="fng">-</div><div class="note" id="fngNote"></div></div>
+    <div class="card"><h3>뉴스 데이터</h3><div id="newsMeta" class="note"></div><div class="note">출처: 더따리 뉴스피드(AI 영향 분석 포함). 페이지를 열거나 새로고침하면 더따리에서 바로 조회하고(PC 작업도 5분마다 갱신), 실시간은 <a href="https://theddari.com/trends/news" target="_blank" style="color:var(--acc)">더따리 뉴스피드</a>에서 볼 수 있어요.</div></div>
+  </div>
+  <h2>BTC 가격과 주요 이벤트</h2>
+  <div class="chart" id="newsChart" style="height:320px"><div class="legend">1시간봉 · 위 화살표 호재 / 아래 화살표 악재 (주요 이벤트 + 속보 점수 70 이상)</div></div>
+  <div class="two">
+    <div>
+      <h2>실시간 수집 뉴스 (BTC 영향 가능)</h2>
+      <div class="toolbar">
+        <select id="nCat"><option value="">전체 분야</option></select>
+        <select id="nSenti"><option value="">호재/악재 전체</option><option value="LONG">호재</option><option value="SHORT">악재</option><option value="NEUTRAL">중립</option></select>
+        <label>최소 점수 <input type="number" id="nScore" value="50" min="0" max="100" style="width:60px"></label>
+        <input id="nQ" placeholder="검색" style="width:140px">
+      </div>
+      <div class="scroll" style="max-height:700px" id="newsList"></div>
+    </div>
+    <div>
+      <h2>9월 말~10월 주요 이벤트 타임라인</h2>
+      <div class="scroll" style="max-height:760px" id="timeline"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BACKTEST ============ -->
+<section class="tab" id="tab-bt">
+  <div class="card" style="margin-top:6px">
+    <div class="toolbar" style="margin:0 0 8px">
+      <b>종목</b>
+      <label><input type="checkbox" class="btSym" value="BTCUSDT" checked> 비트코인</label>
+      <label><input type="checkbox" class="btSym" value="ETHUSDT"> 이더리움</label>
+      <label><input type="checkbox" class="btSym" value="XRPUSDT"> 리플</label>
+      <b style="margin-left:14px">전략</b>
+      <label><input type="checkbox" class="btMode" value="1" checked> v1 단타 역추세</label>
+      <label><input type="checkbox" class="btMode" value="2" checked> v2 스윙 코어</label>
+    </div>
+    <div class="toolbar" style="margin:0 0 8px">
+      <label>시작 <input type="date" id="btStart" value="2018-01-01"></label>
+      <label>종료 <input type="date" id="btEnd" value="2023-12-31"></label>
+      <span class="note">빠른 선택</span>
+      <button class="btn ghost" data-preset="max">가능한 최대 (~현재)</button>
+      <button class="btn ghost" data-preset="a">2011~2023</button>
+      <button class="btn ghost" data-preset="b">2018~2023</button>
+      <button class="btn ghost" data-preset="c">2020~현재</button>
+      <button class="btn ghost" data-preset="y1">최근 1년</button>
+      <button class="btn ghost" data-preset="m3">최근 3개월</button>
+    </div>
+    <div class="toolbar" style="margin:0">
+      <label>봉 <select id="btTf"><option value="900000">15분봉 (장기 권장)</option><option value="300000">5분봉 (정밀, 4년 이하)</option></select></label>
+      <label>사이즈 <select id="btComp"><option value="1">복리 (현재 자금 기준, 권장)</option><option value="0">고정 (항상 시작 자금 기준)</option></select></label>
+      <button class="btn" id="btRun">백테스트 실행</button>
+      <button class="btn ghost" id="btCsv">거래내역 CSV</button>
+      <button class="btn ghost" id="btClear">저장 데이터 지우기</button>
+    </div>
+    <div class="toolbar" style="margin:8px 0 0">
+      <label><input type="checkbox" id="btSeg"> <b>횡보장 구간만</b> (BTC 장분위기 기준, 구간마다 시작 자금으로 새로 시작)</label>
+      <label>최소 기간 <input id="btSegMin" type="number" value="14" style="width:60px">일</label>
+      <label>30일 고저폭 상한 <input id="btSegBox" type="number" value="0" style="width:60px">% (0=제한 없음)</label>
+      <label><input type="checkbox" id="btSegDef"> 구간 안에서 박스 이탈 방어 (필터 1번)</label>
+    </div>
+    <div class="note" id="btStatus" style="margin-top:10px">종목·전략·기간을 고르고 실행하세요. 파라미터는 '전략 설정' 탭 값을 그대로 써요.</div>
+    <div class="note" style="margin-top:6px">데이터 범위: BTC 2011-09~ (비트스탬프 → 2017-08~ 바이낸스 현물 → 2019-09~ 바이낸스 선물), ETH 2016-05~ (코인베이스 → 바이낸스), XRP 2016-12~ (비트스탬프 → 바이낸스). 시작일에 맞춰 쓸 수 있는 가장 좋은 출처 하나를 자동으로 고릅니다. 2010년 데이터는 거래소 API에 없어서 BTC는 2011-09부터 가능해요. 한 번 받은 월별 데이터는 브라우저에 저장돼서 다음 실행부터 빨라요.</div>
+  </div>
+  <div id="btSegWrap" style="display:none">
+    <h2>횡보장 구간별 결과 요약</h2>
+    <div class="note" id="btSegNote"></div>
+    <div class="scroll" style="max-height:none"><table id="btSegSum"></table></div>
+    <div class="toolbar"><div class="seg" id="btSegSym"></div><span class="note">막판 20% = 구간 마지막 20% 기간 동안의 손익 (박스가 깨질 때 손실이 여기 몰려요)</span></div>
+    <div class="scroll" style="max-height:520px"><table id="btSegTable"></table></div>
+  </div>
+  <h2>결과 요약 (전체 기간 연속 매매)</h2>
+  <div class="scroll" style="max-height:none"><table id="btSummary"></table></div>
+  <h2>연도별 수익률</h2>
+  <div class="scroll"><table id="btYearly"></table></div>
+  <div class="toolbar"><div class="seg" id="btSymSeg"></div><label><input type="checkbox" id="btLogChk" checked> 로그 스케일</label></div>
+  <div class="chart" id="btChart" style="height:380px"><div class="legend" id="btLegend"></div></div>
+  <h2>트레이드 내역</h2>
+  <div class="toolbar"><div class="seg" id="btTrSeg"></div><span class="note" id="btTrCount"></span></div>
+  <div class="scroll"><table id="btTrades"></table></div>
+</section>
+
+<!-- ============ CONFIG ============ -->
+<section class="tab" id="tab-cfg">
+  <h2>전략 규칙 (웨돔 매매 데이터에서 뽑은 패턴)</h2>
+  <div class="card note" style="font-size:13px;color:var(--text)">
+    <b>현재 기본값 = 추세 필터 1번 + 리스크 적응형 익절</b>: 박스가 깨지는 쪽으로의 역방향 매매는 막고(1번), 매크로 리스크 점수가 60 이상이면 분할 익절을 +0.5/+0.8/+1.2%로 짧게 가져가요(웨돔이 불안한 날 짧게 먹는 패턴). 2018~현재 백테스트에서 BTC·ETH v2 기준 가장 나은 조합이었어요.<br>
+    <b>추세 필터 3번 = BTC 장분위기</b>: BTC 일봉으로 강세장/횡보장/약세장을 판별해서 횡보장일 때만 웨돔 방식으로 매매하고, 강세장·약세장이면 포지션을 정리하고 쉬어요. 기준은 모의매매 탭 상단 '장분위기' 카드에 있어요. 4번은 장분위기 + 1번 신고가권 필터를 같이 써요.<br>
+    <b>추세 필터 1번 (예전 기본값: 30일, 0.75)</b>: 가격이 최근 30일 고저 범위의 상단 25% 안으로 올라오면 '상승 추세'로 보고 숏 진입·추가를 막고 들고 있던 숏은 정리해요(하단 25%면 반대로 롱 금지). 다시 범위 중간 아래로 내려오면 해제돼요. 박스 안에서는 웨돔 방식 그대로 매매하고, 박스를 뚫고 나가는 추세장에서만 역방향을 막는 안전장치예요.<br>
+    · 2번(이동평균)은 1시간봉 N일 이평 위/아래로 방향을 제한해요. 장기 결과는 v1에 더 잘 맞지만 지금 같은 박스장 수익을 거의 없애요.<br>
+    · 필터 없이(0) 2018~현재를 돌리면 두 전략 모두 계좌가 0이 됐어요.<br><br>
+    <b>v2 스윙 코어 (기본값)</b>: 방향은 5일 박스로 정하고, 24시간 신호는 물량 조절에만 씁니다.<br>
+    · 5일(1시간봉 120개) 고저 범위에서 상단 75% 이상이면 코어 방향 숏, 하단 10% 이하까지 빠져야 롱으로 전환 (그 사이에서는 기존 방향 유지). 웨돔은 전체 시간의 66%를 숏으로 보냈고, 이 규칙 하나로 웨돔 방향의 약 85%가 설명됩니다.<br>
+    · 코어 방향으로만 진입·추가하고, 반대쪽 24시간 극단 신호가 오면 뒤집지 않고 일부만 익절(코어 30%는 유지). 방향은 5일 박스 기준이 바뀔 때만 뒤집습니다.<br><br>
+    <b>v1 단타 역추세</b>: 박스권 역추세 + 분할 물타기 + 분할 익절 + 24시간 극단 스위칭 (전략 버전을 1로 바꾸면 사용)<br>
+    아래 1)~7)은 두 버전 공통 (v2에서는 5)를 코어 유지 부분 익절로 대체)<br>
+    1) <b>숏 신호</b>: 15분봉 RSI ≥ 기준, 1시간봉 볼린저 %B ≥ 기준, 24시간 범위 상단 위치 ≥ 기준, 당일 VWAP 위 (웨돔 숏 추가 시 중앙값: RSI 65, %B 0.96, 상단 86%, VWAP 위 85%)<br>
+    2) <b>롱 신호</b>: 15분봉 RSI ≤ 기준, %B ≤ 기준, 24시간 범위 하단, VWAP 아래 (웨돔 롱 추가 중앙값: RSI 41, %B 0.23, 하단 23%)<br>
+    3) <b>분할 진입</b>: 신호가 계속되고 마지막 진입가 대비 불리하게 일정 % 이상 움직이면 다음 분할 추가 (웨돔 추가 진입의 79%가 평단보다 불리한 가격)<br>
+    4) <b>분할 익절</b>: 평단 대비 +1%, +2%, +3%에서 각각 일부 익절 (웨돔 익절 중앙값 평단 대비 +1.8%)<br>
+    5) <b>스위칭</b>: 반대 신호가 나오고 손실이 작으면 전량 청산 후 반대 포지션 1차 진입<br>
+    6) <b>물량 조절</b>: 많이 물린 뒤 평단 근처로 돌아오면 일부 정리 (웨돔 손실 정리는 전부 -0.84% 이내)<br>
+    7) <b>안전 손절</b>: 웨돔은 거의 안 했지만 모의에서는 평단 대비 일정 % 역행 시 전량 손절 (계좌 보호용)<br>
+    기본값은 9/28~10/23 BTC에서 웨돔 실제 포지션과 방향 일치율·진입 포착률이 가장 높았던 조합(1,152개 조합 탐색)이에요. 같은 기간에 맞춘 값이라 앞으로의 성과는 다를 수 있어요.<br>
+    수수료는 체결 금액 기준으로 차감. 사이즈는 시작 자금 고정(복리 X), 전체 분할을 다 채우면 실배율 = 최대 노출 배수.
+  </div>
+  <h2>파라미터</h2>
+  <div class="grid-params" id="params"></div>
+  <div class="toolbar"><button class="btn" id="applyP">적용하고 다시 계산</button><button class="btn ghost" id="resetP">기본값</button><span class="note" id="cfgNote"></span></div>
+</section>
+</main>
+
+<script>
+const SYMS = ['BTCUSDT','ETHUSDT','XRPUSDT'];
+const NAME = {BTCUSDT:'비트코인',ETHUSDT:'이더리움',XRPUSDT:'리플'};
+const DEF = {start:'2026-09-28T21:00', capital:10000, mode:2, boxN:5, biasHi:0.75, biasLo:0.1, capDrop:0, core:0.3, oppTpMin:0.3, adapt:1, riskHi:60, tpTight:'0.5,0.8,1.2', trend:1, regAdx:25, regSlope:3, regConf:5, trendN:30, trendBand:2, trendPct:0.75, trendExit:1, rsiS:66, pbS:0.95, posS:0.8, rsiL:38, pbL:0.3, posL:0.2, useVwap:1, maxTr:5, trW:'1,1,2,2,4', lev:3, addGap:0.3, cool:30, tp:'1.5,3,4.5', tpFrac:0.3, flipMax:0.5, cutTr:4, stop:4, fee:0.04, session:0};
+const PDESC = {start:['시작 시각 (KST)','datetime-local'], capital:['종목별 시작 자금 ($)'], mode:['전략 버전 (2=스윙 코어, 1=단타 역추세)'], boxN:['[v2] 박스 기간 (일)'], biasHi:['[v2] 숏 전환: N일 범위 위치 ≥'], biasLo:['[v2] 롱 전환: N일 범위 위치 ≤'], capDrop:['[v2] 롱 전환 최소 하락폭 (N일 고점 대비 %, 0=사용 안 함)'], adapt:['리스크 적응형 익절 (1=켬): 매크로 리스크가 기준 이상이면 짧은 익절 사용'], riskHi:['리스크 기준 점수 (이상이면 짧은 익절)'], tpTight:['리스크 높을 때 분할 익절 지점 (% 쉼표)','text'], trend:['추세 필터 (0=끔, 1=N일 신고가/신저가권, 2=N일 이동평균, 3=BTC 장분위기: 횡보장에서만 매매)'], regAdx:['[필터3] 추세 판단 ADX 기준 (이상이면 추세)'], regSlope:['[필터3] 20일선 10일 기울기 기준 (±%)'], regConf:['[필터3] 장분위기 전환 확인 일수'], trendN:['추세 필터 기간 N (일)'], trendBand:['[필터2] 이평 완충 구간 (±%, 이 안이면 박스로 보고 양방향 허용)'], trendPct:['[필터1] 범위 위치 기준 (0.85=상단 15% 안이면 상승추세)'], trendExit:['추세 반대 포지션 청산 (1/0)'], core:['[v2] 코어 유지 비중 (최대 물량 대비)'], oppTpMin:['[v2] 반대 극단 익절 최소 수익 (%)'], rsiS:['숏: 15분 RSI ≥'], pbS:['숏: 1시간 %B ≥'], posS:['숏: 24h 범위 위치 ≥ (0~1)'], rsiL:['롱: 15분 RSI ≤'], pbL:['롱: 1시간 %B ≤'], posL:['롱: 24h 범위 위치 ≤'], useVwap:['VWAP 조건 사용 (1/0)'], maxTr:['최대 분할 횟수'], trW:['분할 비중 (쉼표)','text'], lev:['최대 노출 배수 (실배율)'], addGap:['추가 진입 간격 (% 역행)'], cool:['추가 진입 최소 간격 (분)'], tp:['분할 익절 지점 (% 쉼표)','text'], tpFrac:['익절 1회당 비중 (최대 물량 대비)'], flipMax:['스위칭 허용 손실 (%)'], cutTr:['물량조절 시작 분할 수'], stop:['안전 손절 (% 역행)'], fee:['수수료 (% 편도)'], session:['방송시간(21~03시)만 진입 (1/0)']};
+let P = Object.assign({}, DEF, JSON.parse(localStorage.getItem('wedomP')||'{}'));
+const D = window.WEDOM_DATA || {events:[],news:[],timeline:[]};
+function mergeEv(arr){ const k=e=>`${e.at}|${e.type}|${e.p?e.p.sym:''}|${e.p?e.p.side:''}`; const m=new Map((D.events||[]).map(e=>[k(e),e])); arr.forEach(e=>m.set(k(e),e)); D.events=[...m.values()].sort((a,b)=>a.at-b.at); }
+function applyLive(L){ if(L&&L.macro&&L.macro.updatedAt&&(!D.macro||L.macro.updatedAt>(D.macro.updatedAt||0))) D.macro=L.macro; if(!L||!L.updatedAt||L.updatedAt<=(D.liveAt||D.updatedAt||0)) return false; if(L.events&&L.events.length) mergeEv(L.events); if(L.news){ const m=new Map((D.news||[]).map(n=>[n.id,n])); L.news.forEach(n=>m.set(n.id,n)); D.news=[...m.values()].sort((a,b)=>b.t-a.t); } D.liveAt=L.updatedAt; return true; }
+applyLive(window.WEDOM_LIVE);
+function loadScript(src){ return new Promise(res=>{ const s=document.createElement('script'); s.src=src; s.onload=()=>{ s.remove(); res(true); }; s.onerror=()=>{ s.remove(); res(false); }; document.head.appendChild(s); }); }
+async function reloadLive(){ let ch=false; const prev=window.WEDOM_DATA;
+  if(await loadScript('data.js?ts='+Date.now())){ const N=window.WEDOM_DATA; if(N && N!==prev && N.updatedAt>(D.updatedAt||0)){ if(N.events && N.events.length) mergeEv(N.events); if(N.news){ const m=new Map((D.news||[]).map(n=>[n.id,n])); N.news.forEach(n=>m.set(n.id,n)); D.news=[...m.values()].sort((a,b)=>b.t-a.t); } if(N.timeline&&N.timeline.length) D.timeline=N.timeline; if(N.macro&&N.macro.updatedAt&&(!D.macro||N.macro.updatedAt>(D.macro.updatedAt||0))) D.macro=N.macro; D.updatedAt=N.updatedAt; ch=true; } window.WEDOM_DATA=D; }
+  if(await loadScript('live.js?ts='+Date.now())) ch = applyLive(window.WEDOM_LIVE) || ch;
+  return ch; }
+// ---- 더따리 API 직접 조회: 페이지 열거나 새로고침하면 PC 작업(5분 주기)을 기다리지 않고 바로 최신 웨돔 매매·뉴스를 가져옴 ----
+const DDARI='https://api.theddari.com/graphql';
+async function gql(query, variables){ const r=await fetch(DDARI,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query,variables}),cache:'no-store'}); if(!r.ok) throw new Error('theddari '+r.status); const j=await r.json(); if(j.errors) throw new Error(j.errors[0].message); return j.data; }
+const evKey = e => `${e.at}|${e.type}|${e.p?e.p.sym:''}|${e.p?e.p.side:''}`;
+const mapEv = e => ({at:e.at, type:e.type, video:e.videoTitle, videoId:e.videoId, ex:e.exchange, p:e.position?{sym:e.position.rawSymbol, side:e.position.side, size:e.position.size, entry:e.position.entryPrice, lev:e.position.leverage}:null, prev:e.previous?e.previous.size:null, mark:e.markPrice, exit:e.exitPrice, pnl:e.pnlUsd, pnlPct:e.pnlPct});
+const NEWS_MACRO=['rates_fed','inflation_cpi','geopolitics_war','regulation_policy','bonds','fx','politics_election','crypto','jobs_labor','gdp_macro','tariff_trade','macro'], NEWS_WEAK=['oil_commodities','equity_index','ai'];
+const NEWS_KW=/비트|BTC|Bitcoin|크립토|가상자산|암호화폐|이더리움|ETH|XRP|리플|스테이블|연준|파월|FOMC|CPI|금리|관세/i;
+let directAt=0, directBusy=null;
+async function fetchDirect(){ if(directBusy) return directBusy; directBusy=(async()=>{ let ch=false;
+  // 이벤트: 최신부터 내려가며 이미 가진 시점까지만 받음 (보통 1페이지)
+  const eq='query BjLiveEvents($handle: String, $kind: String, $before: String, $limit: Int) { bjLiveEvents(handle: $handle, kind: $kind, before: $before, limit: $limit) { result message data } }';
+  const have=new Set((D.events||[]).map(evKey)); const lastAt=Math.max(0,...(D.events||[]).map(e=>e.at)); const got=[]; let before=null;
+  for(let i=0;i<(lastAt?20:300);i++){ const v={handle:'wedombtc',kind:'all',limit:50}; if(before) v.before=before; const d=(await gql(eq,v)).bjLiveEvents.data; const evs=(d&&d.events)||[]; evs.forEach(e=>got.push(mapEv(e))); if(!d||!d.nextCursor||!evs.length) break; if(lastAt && Math.min(...evs.map(e=>e.at))<=lastAt) break; before=String(d.nextCursor); }
+  const add=got.filter(e=>!have.has(evKey(e))); if(add.length){ const m=new Map((D.events||[]).map(e=>[evKey(e),e])); add.forEach(e=>m.set(evKey(e),e)); D.events=[...m.values()].sort((a,b)=>a.at-b.at); ch=true; }
+  // 뉴스: PC 작업과 같은 조건
+  const nq='query NewsTimeline($hours: Int, $region: String, $category: String, $minBreakingScore: Int, $keyword: String, $cursor: String, $limit: Int) { newsTimeline(hours: $hours, region: $region, category: $category, minBreakingScore: $minBreakingScore, keyword: $keyword, cursor: $cursor, limit: $limit) { items { id publishedAt title titleKo url sourceLabel region categories breakingScore keywords aiImpact aiSentiment } } }';
+  const nm=new Map((D.news||[]).map(n=>[n.id,n])); const n0=nm.size;
+  const res=await Promise.allSettled([{hours:24,region:'CRYPTO',limit:200},{hours:24,minBreakingScore:60,limit:200},{hours:6,minBreakingScore:45,limit:200},{hours:24,keyword:'비트코인',limit:100}].map(v=>gql(nq,v)));
+  for(const r of res){ if(r.status!=='fulfilled') continue; for(const n of (r.value.newsTimeline.items||[])){ if(!n||nm.has(n.id)) continue; const cats=n.categories||[]; const title=n.titleKo||n.title;
+    const rel=n.region==='CRYPTO'||cats.some(c=>NEWS_MACRO.includes(c))||(cats.some(c=>NEWS_WEAK.includes(c))&&n.breakingScore>=65)||NEWS_KW.test(title); if(!rel) continue;
+    nm.set(n.id,{id:n.id,t:Date.parse(n.publishedAt),title,url:n.url,src:n.sourceLabel,region:n.region,cats,score:n.breakingScore,impact:n.aiImpact,senti:n.aiSentiment,kw:n.keywords||[]}); } }
+  if(nm.size>n0){ D.news=[...nm.values()].sort((a,b)=>b.t-a.t); ch=true; }
+  directAt=Date.now(); return ch; })().finally(()=>{ directBusy=null; }); return directBusy; }
+function dataAt(){ return Math.max(D.liveAt||0, D.updatedAt||0, directAt); }
+const KST = 9*3600e3, M5 = 300e3, H1 = 3600e3;
+const $ = id => document.getElementById(id);
+const fmt = (x,d=2) => x==null||!isFinite(x) ? '-' : Number(x).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pfmt = p => p>=1000? fmt(p,1) : p>=10? fmt(p,2) : fmt(p,4);
+const kst = t => { const d=new Date(t+KST); return `${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`; };
+const cls = x => x>0?'up':x<0?'down':'';
+const startMs = () => Date.parse(P.start+':00+09:00');
+
+// ---------------- data ----------------
+const K = {}; // sym -> {m5:[], h1:[]}
+let SRC = null; // 'binance' | 'bybit' | 'embedded'
+async function klBinance(sym, interval, start, end){
+  let out=[], s=start;
+  while(s<end){
+    const r = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${sym}&interval=${interval}&startTime=${s}&limit=1500`);
+    const j = await r.json(); if(!Array.isArray(j)||!j.length) break;
+    out.push(...j.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})));
+    s = j[j.length-1][0]+1; if(j.length<1500) break;
+  }
+  return out;
+}
+async function klBybit(sym, interval, start, end){
+  const iv = interval==='5m'?'5':'60', ms = interval==='5m'?M5:H1; let out=[], s=start;
+  while(s<end){
+    const e = Math.min(end, s+999*ms);
+    const j = await (await fetch(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${sym}&interval=${iv}&start=${s}&end=${e}&limit=1000`)).json();
+    const list = (j.result&&j.result.list)||[]; if(!list.length){ s=e+1; continue; }
+    out.push(...list.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})).reverse());
+    s = e+1;
+  }
+  const m=new Map(); out.forEach(b=>m.set(b.t,b)); return [...m.values()].sort((a,b)=>a.t-b.t);
+}
+async function klBitget(sym, interval, start, end){
+  const g = interval==='5m'?'5m':'1H', ms = interval==='5m'?M5:H1; let out=[], s=start-1;
+  while(s<end){
+    const e = Math.min(end, s+999*ms);
+    const j = await (await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${sym}&productType=usdt-futures&granularity=${g}&startTime=${s}&endTime=${e}&limit=1000`)).json();
+    (j.data||[]).forEach(k=>out.push({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+    s = e;
+  }
+  const m=new Map(); out.forEach(b=>m.set(b.t,b)); return [...m.values()].sort((a,b)=>a.t-b.t);
+}
+function klEmbedded(sym, interval, start){ const arr=((D.klines||{})[sym]||{})[interval==='5m'?'m5':'h1']||[]; return arr.map(k=>({t:k[0],o:k[1],h:k[2],l:k[3],c:k[4],v:k[5]})).filter(b=>b.t>=start); }
+async function kl(sym, interval, start, end){
+  const order = SRC? [SRC] : ['binance','bybit','bitget'];
+  for(const src of order){
+    if(src==='embedded') break;
+    try{ const r = await ({binance:klBinance,bybit:klBybit,bitget:klBitget})[src](sym, interval, start, end); if(r.length){ SRC=src; return r; } }catch(e){ if(SRC===src) SRC=null; }
+  }
+  SRC = SRC || 'embedded';
+  return SRC==='embedded'? klEmbedded(sym, interval, start) : [];
+}
+async function fetchDaily(sym, start, end){
+  const tries = [
+    async()=>{ const out=[]; let s=start; while(s<end){ const j=await (await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${sym}&interval=1d&startTime=${s}&limit=1500`)).json(); if(!Array.isArray(j)||!j.length) break; out.push(...j.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}))); s=j[j.length-1][0]+86400e3; if(j.length<1500) break; } return out; },
+    async()=>{ const out=[]; let s=start; while(s<end){ const j=await (await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=1d&startTime=${s}&limit=1000`)).json(); if(!Array.isArray(j)||!j.length) break; out.push(...j.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}))); s=j[j.length-1][0]+86400e3; if(j.length<1000) break; } return out; },
+    async()=>{ const j=await (await fetch(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${sym}&interval=D&start=${start}&end=${end}&limit=1000`)).json(); return ((j.result&&j.result.list)||[]).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})).sort((a,b)=>a.t-b.t); },
+    async()=>{ const j=await (await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${sym}&productType=usdt-futures&granularity=1D&limit=1000`)).json(); return (j.data||[]).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})).sort((a,b)=>a.t-b.t); },
+  ];
+  for(const f of tries){ try{ const r=await f(); if(r.length>60) return r; }catch(e){} }
+  return [];
+}
+async function btcDailyRange(s, e){ // 백테스트용: 2017-08 이전은 비트스탬프 일봉
+  let out=[]; const BN=Date.UTC(2017,7,17);
+  if(s<BN){ let x=Math.floor(s/1000); while(x*1000<Math.min(e,BN)){ const j=await getJSON(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=86400&limit=1000&start=${x}`); const o=(j.data&&j.data.ohlc)||[]; if(!o.length){ x+=1000*86400; continue; } for(const k of o){ const t=k.timestamp*1000; if(t<BN) out.push({t,o:+k.open,h:+k.high,l:+k.low,c:+k.close,v:+k.volume}); } x=+o[o.length-1].timestamp+86400; } }
+  if(e>BN){ const b=await fetchDaily('BTCUSDT', Math.max(s,BN), e); out=out.concat(b.filter(x=>x.t>=BN)); }
+  const m=new Map(); out.forEach(b=>m.set(b.t,b)); return [...m.values()].sort((a,b)=>a.t-b.t);
+}
+let lastDailyFetch=0;
+async function refreshDaily(){ const d=await fetchDaily('BTCUSDT', Date.now()-600*86400e3, Date.now()); if(d.length) { BTCD=d; lastDailyFetch=Date.now(); } }
+async function loadAll(){
+  await refreshDaily();
+  const st = startMs(), now = Date.now();
+  await Promise.all(SYMS.map(async s=>{
+    const m5 = await kl(s,'5m', st-2*86400e3, now);
+    const h1 = await kl(s,'1h', st-35*86400e3, now);
+    K[s] = {m5, h1};
+  }));
+}
+async function refreshTail(){
+  if(Date.now()-lastDailyFetch>30*60e3) { try{ await refreshDaily(); }catch(e){} }
+  await Promise.all(SYMS.map(async s=>{
+    const k=K[s]; if(!k) return;
+    for (const [key,iv] of [['m5','5m'],['h1','1h']]) {
+      const arr=k[key]; const last=arr[arr.length-1];
+      if(SRC==='embedded'){ SRC=null; }
+      const add = await kl(s, iv, last.t, Date.now()); if(SRC==='embedded') continue;
+      for(const b of add){ if(b.t===arr[arr.length-1].t) arr[arr.length-1]=b; else if(b.t>arr[arr.length-1].t) arr.push(b); }
+    }
+  }));
+}
+// ---------------- indicators ----------------
+function agg(bars, ms){ const out=[]; let cur=null; for(const b of bars){ const t=Math.floor(b.t/ms)*ms; if(!cur||cur.t!==t){ cur={t,o:b.o,h:b.h,l:b.l,c:b.c,v:b.v}; out.push(cur);} else { cur.h=Math.max(cur.h,b.h); cur.l=Math.min(cur.l,b.l); cur.c=b.c; cur.v+=b.v; } } return out; }
+function ema(a,n){ const k=2/(n+1); let e=null; return a.map((v,i)=>{ e = e===null? v : v*k+e*(1-k); return i>=n-1? e:null; }); }
+function rsi(c,n=14){ const o=[null]; let ag=0,al=0; for(let i=1;i<c.length;i++){ const d=c[i]-c[i-1],g=Math.max(d,0),l=Math.max(-d,0); if(i<=n){ag+=g/n;al+=l/n;o.push(i===n?100-100/(1+ag/(al||1e-9)):null);} else {ag=(ag*(n-1)+g)/n; al=(al*(n-1)+l)/n; o.push(100-100/(1+ag/(al||1e-9)));} } return o; }
+function boll(c,n=20,k=2){ const out=new Array(c.length).fill(null); let s=0,s2=0; for(let i=0;i<c.length;i++){ s+=c[i]; s2+=c[i]*c[i]; if(i>=n){ s-=c[i-n]; s2-=c[i-n]*c[i-n]; } if(i>=n-1){ const m=s/n, sd=Math.sqrt(Math.max(s2/n-m*m,0)); out[i]={m,up:m+k*sd,lo:m-k*sd}; } } return out; }
+function stoch(r,n=14){ return r.map((v,i)=>{ if(v==null||i<n) return null; let mn=1e9,mx=-1e9; for(let j=i-n+1;j<=i;j++){ if(r[j]==null) return null; mn=Math.min(mn,r[j]); mx=Math.max(mx,r[j]); } return mx>mn?(v-mn)/(mx-mn)*100:50; }); }
+function sma(a,n){ return a.map((v,i)=>{ if(i<n-1||a.slice(i-n+1,i+1).some(x=>x==null)) return null; return a.slice(i-n+1,i+1).reduce((x,y)=>x+y,0)/n; }); }
+function indi(bars){ const c=bars.map(b=>b.c); const r=rsi(c); const st=sma(stoch(r),3); return {rsi:r, bb:boll(c), st, ema50:ema(c,50)}; }
+function vwapSeries(m5){ const out=[]; let day=-1,pv=0,vv=0; for(const b of m5){ const d=Math.floor(b.t/86400e3); if(d!==day){day=d;pv=0;vv=0;} pv+=(b.h+b.l+b.c)/3*b.v; vv+=b.v; out.push(vv?pv/vv:b.c); } return out; }
+
+// ---------------- simulation ----------------
+// Generic engine: works on any base timeframe (5m live, 15m/5m backtests)
+function featuresBars(base, h1, ms){
+  const m15 = ms<900e3 ? agg(base,900e3) : base; const I15=indi(m15), I1=indi(h1);
+  const vw=vwapSeries(base);
+  const F=new Array(base.length);
+  let j15=-1, j1=-1;
+  const W=Math.max(1,Math.round(86400e3/ms)), dqH=[], dqL=[];
+  for(let i=0;i<base.length;i++){
+    const b=base[i], tc=b.t+ms;
+    while(j15+1<m15.length && m15[j15+1].t+900e3<=tc) j15++;
+    while(j1+1<h1.length && h1[j1+1].t+H1<=tc) j1++;
+    while(dqH.length&&base[dqH[dqH.length-1]].h<=b.h) dqH.pop(); dqH.push(i); while(dqH[0]<=i-W) dqH.shift();
+    while(dqL.length&&base[dqL[dqL.length-1]].l>=b.l) dqL.pop(); dqL.push(i); while(dqL[0]<=i-W) dqL.shift();
+    const hi=base[dqH[0]].h, lo=base[dqL[0]].l;
+    const bb=j1>=0?I1.bb[j1]:null;
+    F[i]={rsi15: j15>=0?I15.rsi[j15]:null, pB: bb&&bb.up>bb.lo?(b.c-bb.lo)/(bb.up-bb.lo):null, st1h: j1>=0?I1.st[j1]:null, pos24: hi>lo?(b.c-lo)/(hi-lo):0.5, vwap: vw[i]?(b.c/vw[i]-1)*100:0, hi24:hi, lo24:lo};
+  }
+  return F;
+}
+function features(sym){ return featuresBars(K[sym].m5, K[sym].h1, M5); }
+function boxBars(base, h1, ms, N){ const W=N*24; const hiA=[], loA=[], dqH=[], dqL=[];
+  for(let i=0;i<h1.length;i++){ while(dqH.length&&h1[dqH[dqH.length-1]].h<=h1[i].h) dqH.pop(); dqH.push(i); while(dqH[0]<=i-W) dqH.shift(); while(dqL.length&&h1[dqL[dqL.length-1]].l>=h1[i].l) dqL.pop(); dqL.push(i); while(dqL[0]<=i-W) dqL.shift(); hiA.push(h1[dqH[0]].h); loA.push(h1[dqL[0]].l); }
+  const out=new Array(base.length).fill(null); let j=-1;
+  for(let i=0;i<base.length;i++){ const tc=base[i].t+ms; while(j+1<h1.length&&h1[j+1].t+H1<=tc) j++; if(j<W) continue; const hi=Math.max(hiA[j],base[i].h), lo=Math.min(loA[j],base[i].l); out[i]={p:hi>lo?(base[i].c-lo)/(hi-lo):0.5, hi, lo}; }
+  return out; }
+function boxSeries(sym, N){ return boxBars(K[sym].m5, K[sym].h1, M5, N); }
+// ---- BTC 장분위기 (강세/횡보/약세) : 일봉 기준 ----
+const REGNAME={BULL:'강세장',SIDE:'횡보장',BEAR:'약세장'};
+function classifyRegime(d, PP){ const adxMin=+(PP.regAdx??25), slp=+(PP.regSlope??3), conf=Math.max(1,+(PP.regConf??5));
+  const c=d.map(b=>b.c), e50=ema(c,50), e20=ema(c,20); const n=14; let tr=0,pdm=0,mdm=0,adx=null; const dxs=[]; const out=[]; let st='SIDE', cand=null, cc=0;
+  for(let i=0;i<d.length;i++){ let pdi=null,mdi=null;
+    if(i>0){ const up=d[i].h-d[i-1].h, dn=d[i-1].l-d[i].l; const p=(up>dn&&up>0)?up:0, m=(dn>up&&dn>0)?dn:0; const t=Math.max(d[i].h-d[i].l,Math.abs(d[i].h-d[i-1].c),Math.abs(d[i].l-d[i-1].c));
+      if(i<=n){ tr+=t; pdm+=p; mdm+=m; } else { tr=tr-tr/n+t; pdm=pdm-pdm/n+p; mdm=mdm-mdm/n+m; }
+      if(i>=n){ pdi=100*pdm/(tr||1); mdi=100*mdm/(tr||1); const dx=100*Math.abs(pdi-mdi)/((pdi+mdi)||1); if(adx==null){ dxs.push(dx); if(dxs.length===n) adx=dxs.reduce((a,b)=>a+b)/n; } else adx=(adx*(n-1)+dx)/n; } }
+    const slope=(e20[i]!=null&&i>=10&&e20[i-10]!=null)?(e20[i]/e20[i-10]-1)*100:null;
+    let raw='SIDE'; if(e50[i]!=null&&adx!=null&&slope!=null){ if(c[i]>e50[i]&&slope>slp&&adx>=adxMin&&pdi>mdi) raw='BULL'; else if(c[i]<e50[i]&&slope<-slp&&adx>=adxMin&&mdi>pdi) raw='BEAR'; }
+    if(raw!==st){ if(raw===cand) cc++; else { cand=raw; cc=1; } if(cc>=conf){ st=raw; cand=null; cc=0; } } else { cand=null; cc=0; }
+    out.push({t:d[i].t, c:c[i], reg:st, raw, adx, pdi, mdi, e50:e50[i], slope, pend: cand && cand!==st ? {to:cand, n:cc, need:conf} : null}); }
+  return out; }
+let BTCD = null; // BTC 일봉 (실시간 모의매매용)
+// 매크로 리스크 점수 (VIX, OVX, MOVE 1년 백분위 + 브렌트 20일 상승률 백분위) 일별 시계열
+function riskDaily(M){ if(!M) return []; const keys=['VIX','OVX','MOVE','BRENT']; const per={};
+  for(const k of keys){ const s=M[k]; if(!s||s.length<120) continue; const m=new Map();
+    for(let i=60;i<s.length;i++){ let v, w; if(k==='BRENT'){ if(i<20) continue; v=(s[i][1]/s[i-20][1]-1)*100; w=[]; for(let j=Math.max(20,i-364);j<=i;j++) w.push((s[j][1]/s[j-20][1]-1)*100); } else { v=s[i][1]; w=s.slice(Math.max(0,i-364),i+1).map(x=>x[1]); } let c=0; for(const x of w) if(x<=v) c++; m.set(Math.floor(s[i][0]/86400e3), c/w.length*100); }
+    per[k]=m; }
+  const days=new Set(); Object.values(per).forEach(m=>m.forEach((_,d)=>days.add(d)));
+  const out=[...days].sort((a,b)=>a-b).map(d=>{ const v=Object.values(per).map(m=>m.get(d)).filter(x=>x!=null); return {d, t:d*86400e3, s: v.length>=3? v.reduce((a,b)=>a+b,0)/v.length : null}; }).filter(x=>x.s!=null);
+  return out; }
+function riskBars(base, ms, M){ const R=riskDaily(M); const out=new Array(base.length).fill(null); if(!R.length) return out; let j=-1;
+  for(let i=0;i<base.length;i++){ const tc=base[i].t+ms; while(j+1<R.length && R[j+1].t+86400e3<=tc) j++; out[i]= j>=0 && tc-R[j].t < 5*86400e3 ? R[j].s : null; } return out; }
+function regimeBars(base, h1, ms, PP, regd){ const mode=+PP.trend, out=new Array(base.length).fill(0); if(!mode) return out;
+  if(mode===4){ const a=regimeBars(base,h1,ms,{...PP,trend:3},regd), b=regimeBars(base,h1,ms,{...PP,trend:1}); const o=a.map((v,i)=>v===9?9:b[i]); o.reg=a.reg; return o; }
+  if(mode===3){ const daily = regd || BTCD || agg(h1, 86400e3); const R3=classifyRegime(daily, PP); let j=-1;
+    for(let i=0;i<base.length;i++){ const tc=base[i].t+ms; while(j+1<R3.length&&R3[j+1].t+86400e3<=tc) j++; out[i] = j<0 ? 9 : (R3[j].reg==='SIDE'?0:9); }
+    out.reg = R3; return out; }
+  const N=+PP.trendN, W=N*24;
+  let hiA=[], loA=[], em=[];
+  if(mode===1){ const dqH=[], dqL=[]; for(let i=0;i<h1.length;i++){ while(dqH.length&&h1[dqH[dqH.length-1]].h<=h1[i].h) dqH.pop(); dqH.push(i); while(dqH[0]<=i-W) dqH.shift(); while(dqL.length&&h1[dqL[dqL.length-1]].l>=h1[i].l) dqL.pop(); dqL.push(i); while(dqL[0]<=i-W) dqL.shift(); hiA.push(h1[dqH[0]].h); loA.push(h1[dqL[0]].l); } }
+  else { em = ema(h1.map(b=>b.c), W); }
+  let j=-1, st=0;
+  for(let i=0;i<base.length;i++){ const tc=base[i].t+ms; while(j+1<h1.length&&h1[j+1].t+H1<=tc) j++; if(j<W) continue; const c=base[i].c;
+    if(mode===1){ const p=(c-loA[j])/(hiA[j]-loA[j]||1); if(p>=+PP.trendPct) st=1; else if(p<=1-PP.trendPct) st=-1; else if(p<0.5&&st>0) st=0; else if(p>0.5&&st<0) st=0; out[i]=st; }
+    else { const bd=(+PP.trendBand||0)/100; out[i] = em[j]==null?0 : c>em[j]*(1+bd)? 1 : c<em[j]*(1-bd)? -1 : 0; } }
+  return out; }
+// mode 1 = v1 단타 역추세, mode 2 = v2 스윙 코어
+// c = {sym, base, h1, ms, st, en, compound, eqStep, BX}
+function runStrategy(mode, c, F, PP){
+  const base=c.base, ms=c.ms, st=c.st, en=c.en==null?Infinity:c.en, eqStep=c.eqStep||6;
+  const BX = mode===2 ? (c.BX || boxBars(base, c.h1, ms, +PP.boxN)) : null;
+  const RG = c.RG || regimeBars(base, c.h1, ms, PP);
+  const RK = +PP.adapt ? (c.RK || riskBars(base, ms, (typeof D!=='undefined'&&D&&D.macro)||null)) : null;
+  const tpsTight = String(PP.tpTight||'0.5,0.8,1.2').split(',').map(Number).filter(x=>x>0);
+  const trW=String(PP.trW).split(',').map(Number).filter(x=>x>0).slice(0,PP.maxTr);
+  const tps=String(PP.tp).split(',').map(Number).filter(x=>x>0);
+  const sumW=trW.reduce((a,b)=>a+b,0);
+  let cash=+PP.capital, pos=null, acts=[], trades=[], eq=[], daily=[], peak=+PP.capital, mdd=0, dead=false, bias=0, lastBx=null, lastDay=-1, feesTot=0, firstC=null, lastC=null, lastT=null;
+  const fee = n => n*PP.fee/100;
+  const sessOk = t => { const h=new Date(t+KST).getUTCHours(); return !+PP.session || h>=21 || h<3; };
+  const unitFor = () => (c.compound? Math.max(cash,0) : +PP.capital)*PP.lev/sumW;
+  function fill(t, kind, side, qty, price, reason){
+    if(!(qty>0)) return;
+    const n=qty*price, fe=fee(n); cash-=fe; feesTot+=fe; let pnl=null;
+    if(kind==='OPEN'||kind==='ADD'){
+      if(!pos){ pos={side, qty:0, avg:0, tr:0, lastP:price, lastT:t, maxQty:0, tpHit:0, minMove:0, cut:false, openT:t, realized:0, fees:0, lastTp:0}; }
+      pos.avg=(pos.avg*pos.qty+price*qty)/(pos.qty+qty); pos.qty+=qty; pos.tr++; pos.lastP=price; pos.lastT=t; pos.maxQty=Math.max(pos.maxQty,pos.qty);
+    } else { pnl=(side==='LONG'?price-pos.avg:pos.avg-price)*qty; cash+=pnl; pos.realized+=pnl; pos.qty-=qty; }
+    if(pos) pos.fees+=fe;
+    const act={t, sym:c.sym, kind, side, qty, price, avg:pos?pos.avg:null, pnl, reason, tr:pos?pos.tr:0, mode};
+    acts.push(act);
+    if(pos && pos.qty<=pos.maxQty*0.02+1e-12){
+      if(pos.qty>0){ const ex=(side==='LONG'?price-pos.avg:pos.avg-price)*pos.qty; cash+=ex; pos.realized+=ex; act.pnl=(act.pnl||0)+ex; act.qty+=pos.qty; }
+      trades.push({sym:c.sym, mode, side:pos.side, openT:pos.openT, closeT:t, avg:pos.avg, exit:price, maxQty:pos.maxQty, tr:pos.tr, pnl:pos.realized-pos.fees, notional:pos.maxQty*pos.avg});
+      pos=null;
+    }
+    act.dir = pos? (pos.side==='LONG'?1:-1) : 0;
+  }
+  const open = (t, side, cpx, reason) => { const u=unitFor(); fill(t,'OPEN',side,u*trW[0]/cpx,cpx,reason); if(pos) pos.unitN=u; };
+  for(let i=0;i<base.length;i++){
+    const b=base[i], t=b.t+ms; if(t>en) break;
+    const f=F[i], cpx=b.c, bx=BX?BX[i]:null;
+    if(mode===2){ if(!bx) continue; if(bx.p>=PP.biasHi) bias=-1; else if(bx.p<=PP.biasLo && (!(+PP.capDrop) || (bx.hi-cpx)/bx.hi*100>=+PP.capDrop)) bias=1; lastBx=bx; }
+    if(t<st) continue;
+    if(firstC==null) firstC=cpx; lastC=cpx; lastT=t;
+    if(dead) break;
+    if(f.rsi15==null||f.pB==null) continue;
+    const rg = RG[i]; const blockAll = rg===9;
+    const sigS = !blockAll && rg<=0 && f.rsi15>=PP.rsiS && f.pB>=PP.pbS && f.pos24>=PP.posS && (!+PP.useVwap||f.vwap>0);
+    const sigL = !blockAll && rg>=0 && f.rsi15<=PP.rsiL && f.pB<=PP.pbL && f.pos24<=PP.posL && (!+PP.useVwap||f.vwap<0);
+    if(pos && blockAll && +PP.trendExit) fill(t,'CLOSE',pos.side,pos.qty,cpx,'장분위기가 횡보장이 아니라 웨돔 방식 중지 (전량 정리)');
+    else if(pos && +PP.trendExit && ((rg>0&&pos.side==='SHORT')||(rg<0&&pos.side==='LONG'))) fill(t,'CLOSE',pos.side,pos.qty,cpx,`추세 필터: ${rg>0?'상승':'하락'}추세라 역방향 포지션 청산`);
+    if(mode===2){
+      let want = bias>0?'LONG':bias<0?'SHORT':null; if(blockAll||(want==='SHORT'&&rg>0)||(want==='LONG'&&rg<0)) want=null;
+      if(pos && want && pos.side!==want) fill(t,'CLOSE',pos.side,pos.qty,cpx,`${PP.boxN}일 박스 ${(bx.p*100).toFixed(0)}% → ${want==='LONG'?'롱':'숏'} 전환`);
+      if(pos){
+        const mv=(pos.side==='LONG'?(cpx-pos.avg):(pos.avg-cpx))/pos.avg*100;
+        if(mv<=-PP.stop) fill(t,'STOP',pos.side,pos.qty,cpx,`안전 손절 ${mv.toFixed(2)}%`);
+        else {
+          const LAD = (RK && RK[i]!=null && RK[i]>=+PP.riskHi) ? tpsTight : tps; while(pos && pos.tpHit<LAD.length && mv>=LAD[pos.tpHit]){ const q=Math.min(pos.qty, pos.maxQty*PP.tpFrac); const lv=LAD[pos.tpHit]; pos.tpHit++; fill(t,'TP',pos.side,q,cpx,`분할 익절 +${lv}% 도달${LAD===tpsTight?' (리스크 '+Math.round(RK[i])+', 짧은 익절)':''}`); }
+          const opp = pos && (pos.side==='LONG'? sigS : sigL);
+          if(pos && opp && mv>=PP.oppTpMin && t-pos.lastTp>=3*H1 && pos.qty>pos.maxQty*PP.core){ pos.lastTp=t; fill(t,'TP',pos.side,Math.min(pos.qty-pos.maxQty*PP.core, pos.maxQty*PP.tpFrac),cpx,'24h 반대 극단 일부 익절 (코어 유지)'); }
+          const same = pos && (pos.side==='LONG'? sigL : sigS);
+          if(pos && same && pos.tr<trW.length && sessOk(t)){
+            const adv=(pos.side==='LONG'?(pos.lastP-cpx):(cpx-pos.lastP))/pos.lastP*100;
+            if(adv>=PP.addGap && t-pos.lastT>=PP.cool*60e3) fill(t,'ADD',pos.side,(pos.unitN||unitFor())*trW[pos.tr]/cpx,cpx,`${pos.tr+1}차 분할 (직전 대비 ${adv.toFixed(2)}% 역행)`);
+          }
+        }
+      }
+      if(!pos && want && sessOk(t)) open(t, want, cpx, `${want==='LONG'?'롱':'숏'} 코어 진입 (${PP.boxN}일 박스 ${(bx.p*100).toFixed(0)}%)`);
+    } else {
+      if(pos){
+        const mv = (pos.side==='LONG'?(cpx-pos.avg):(pos.avg-cpx))/pos.avg*100;
+        pos.minMove=Math.min(pos.minMove,mv);
+        if(mv<=-PP.stop){ fill(t,'STOP',pos.side,pos.qty,cpx,`안전 손절 ${mv.toFixed(2)}%`); }
+        else {
+          const opp = pos.side==='LONG'? sigS : sigL;
+          if(opp && mv>=-PP.flipMax){ const ns=pos.side==='LONG'?'SHORT':'LONG'; fill(t,'CLOSE',pos.side,pos.qty,cpx,`반대 신호 청산 ${mv>=0?'+':''}${mv.toFixed(2)}%`); if(sessOk(t)) open(t, ns, cpx, '스위칭 1차 진입'); }
+          else {
+            const LAD = (RK && RK[i]!=null && RK[i]>=+PP.riskHi) ? tpsTight : tps; while(pos && pos.tpHit<LAD.length && mv>=LAD[pos.tpHit]){ const q=Math.min(pos.qty, pos.maxQty*PP.tpFrac); const lv=LAD[pos.tpHit]; pos.tpHit++; fill(t,'TP',pos.side,q,cpx,`분할 익절 +${lv}% 도달${LAD===tpsTight?' (리스크 '+Math.round(RK[i])+', 짧은 익절)':''}`); }
+            if(pos && pos.tr>=PP.cutTr && !pos.cut && pos.minMove<=-1 && mv>-0.3 && mv<0){ pos.cut=true; fill(t,'CUT',pos.side,pos.qty*0.4,cpx,'물량 조절 (평단 근처 복귀)'); }
+            const same = pos && (pos.side==='LONG'? sigL : sigS);
+            if(pos && same && pos.tr<trW.length && sessOk(t)){
+              const adv = (pos.side==='LONG'?(pos.lastP-cpx):(cpx-pos.lastP))/pos.lastP*100;
+              if(adv>=PP.addGap && t-pos.lastT>=PP.cool*60e3) fill(t,'ADD',pos.side,(pos.unitN||unitFor())*trW[pos.tr]/cpx,cpx,`${pos.tr+1}차 분할 (직전 대비 ${adv.toFixed(2)}% 역행)`);
+            }
+          }
+        }
+      } else if(sessOk(t)) {
+        if(sigS) open(t,'SHORT',cpx,'숏 신호 1차 진입');
+        else if(sigL) open(t,'LONG',cpx,'롱 신호 1차 진입');
+      }
+    }
+    const unr = pos? (pos.side==='LONG'?cpx-pos.avg:pos.avg-cpx)*pos.qty : 0;
+    const v=cash+unr; if(v<=0){ dead=true; }
+    peak=Math.max(peak,v); mdd=Math.max(mdd,(peak-v)/peak*100);
+    if(i%eqStep===0) eq.push({t,v,px:cpx});
+    const day=Math.floor((t+KST)/86400e3); if(day!==lastDay){ daily.push({t,v,px:cpx}); lastDay=day; }
+  }
+  const unr = pos&&lastC!=null? (pos.side==='LONG'?lastC-pos.avg:pos.avg-lastC)*pos.qty : 0;
+  const equity = dead? 0 : cash+unr;
+  if(lastT!=null){ eq.push({t:lastT,v:equity,px:lastC}); daily.push({t:lastT,v:equity,px:lastC}); }
+  const lastF = F[Math.min(F.length-1, (()=>{ let k=base.length-1; while(k>0 && base[k].t+ms>en) k--; return k; })())];
+  return {sym:c.sym, mode, acts, trades, eq, daily, pos, cash, unr, equity, mdd:dead?100:mdd, dead, fees:feesTot, bh: firstC? (lastC/firstC-1)*100 : 0, firstC, last:lastC, st, lastT, F:lastF, bias, box:lastBx};
+}
+function simulate(sym, F){ return runStrategy(+P.mode===2?2:1, {sym, base:K[sym].m5, h1:K[sym].h1, ms:M5, st:startMs(), eqStep:6}, F, P); }
+// ---------------- wedom positions ----------------
+function wedomFor(sym){
+  const ev=D.events.filter(e=>e.p&&e.p.sym===sym).sort((a,b)=>a.at-b.at);
+  const steps=[]; const s={LONG:0,SHORT:0}; const trades=[]; const open={};
+  // 잔량 정리: 축소 후 남은 수량이 아주 작으면(명목가 $500 미만, 예: 0.001 BTC) 사실상 청산으로 보고, 거기서 다시 늘리면 새 진입으로 취급
+  const dust = e => e.p.size*(e.p.entry||e.mark||0) < 500;
+  for(const e0 of ev){
+    let e=e0; const sd=e.p.side;
+    if(e.type==='POSITION_DECREASE' && dust(e)) e={...e, type:'POSITION_CLOSE'};
+    else if(e.type==='POSITION_INCREASE' && !open[sd] && s[sd]===0) e={...e, type:'POSITION_OPEN'};
+    if(e.type==='POSITION_CLOSE') s[sd]=0; else s[sd]=e.p.size;
+    steps.push({t:e.at, L:s.LONG, S:s.SHORT, e});
+    if(e.type==='POSITION_OPEN') open[sd]={side:sd, openT:e.at, maxQty:e.p.size, pnl:0, n:1};
+    else if(open[sd]){ const o=open[sd]; o.n++; o.maxQty=Math.max(o.maxQty,e.p.size); if(e.pnl) o.pnl+=e.pnl; if(e.type==='POSITION_CLOSE'){ o.closeT=e.at; o.avg=e.p.entry; o.exit=e.exit; trades.push(o); delete open[sd]; } }
+  }
+  for(const sd in open){ const o=open[sd]; o.open=true; trades.push(o); }
+  return {ev, steps, trades: trades.sort((a,b)=>a.openT-b.openT)};
+}
+function dirAt(steps, t){ let lo=0,hi=steps.length-1,a=-1; while(lo<=hi){const m=(lo+hi)>>1; if(steps[m].t<=t){a=m;lo=m+1;}else hi=m-1;} if(a<0) return 0; const s=steps[a]; const e=s.e; const px=e.mark||1; const nl=s.L, ns=s.S; if(nl===0&&ns===0) return 0; return nl>ns?1:ns>nl?-1:0; }
+function simDirAt(acts, t){ let d=0; for(const a of acts){ if(a.t>t) break; d=a.dir; } return d; }
+
+// ---------------- charts ----------------
+const LWC = LightweightCharts;
+const chartOpts = h => ({height:h, layout:{background:{color:'#171a21'},textColor:'#8b93a3',fontSize:11}, grid:{vertLines:{color:'#20242d'},horzLines:{color:'#20242d'}}, timeScale:{timeVisible:true,secondsVisible:false,borderColor:'#262b36'}, rightPriceScale:{borderColor:'#262b36',minimumWidth:90}, crosshair:{mode:0}});
+const T = ms => Math.floor((ms+KST)/1000);
+let charts={}, curSym='BTCUSDT', curTF='15m', cmpSym='BTCUSDT', R={}, W={};
+const TFMS={'5m':M5,'15m':900e3,'1h':H1,'4h':4*H1};
+function mk(id){ const el=$(id); if(charts[id]){ charts[id].remove(); } const c=LWC.createChart(el, Object.assign(chartOpts(el.clientHeight),{width:el.clientWidth})); charts[id]=c; return c; }
+function barsFor(sym, tf){ const {m5,h1}=K[sym]; if(tf==='5m') return m5; if(tf==='15m') return agg(m5,900e3); if(tf==='1h') return h1; return agg(h1,4*H1); }
+function markerList(sym, tf, withW, startT){
+  const ms=TFMS[tf], mk=[];
+  for(const a of R[sym].acts){ if(a.t<startT) continue; const t=T(Math.floor((a.t-1)/ms)*ms); const add=a.kind==='OPEN'||a.kind==='ADD';
+    mk.push(add? {time:t, position:a.side==='LONG'?'belowBar':'aboveBar', color:a.side==='LONG'?'#26a69a':'#ef5350', shape:a.side==='LONG'?'arrowUp':'arrowDown', text:a.kind==='OPEN'?'':''}
+              : {time:t, position:a.side==='LONG'?'aboveBar':'belowBar', color:a.kind==='STOP'?'#f5a623':'#c9ced8', shape:'circle', size:0.6}); }
+  if(withW){ for(const e of W[sym].ev){ if(e.at<startT) continue; const t=T(Math.floor(e.at/ms)*ms); const add=e.type==='POSITION_OPEN'||e.type==='POSITION_INCREASE'; const L=e.p.side==='LONG';
+    mk.push({time:t, position: (add?L:!L)?'belowBar':'aboveBar', color: add?(L?'#3fd0ff':'#ff7ad9'):'#5e8bff', shape:'square', size:0.7}); } }
+  return mk.sort((a,b)=>a.time-b.time);
+}
+function drawMain(){
+  const sym=curSym, tf=curTF, bars=barsFor(sym,tf); const st=startMs();
+  const vis = bars.filter(b=>b.t>=st-2*86400e3);
+  const I=indi(bars); const off=bars.length-vis.length;
+  const c=mk('mainChart');
+  const cs=c.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350', priceFormat:{type:'price',precision:sym==='XRPUSDT'?4:sym==='ETHUSDT'?2:1,minMove:sym==='XRPUSDT'?0.0001:0.01}});
+  cs.setData(vis.map(b=>({time:T(b.t),open:b.o,high:b.h,low:b.l,close:b.c})));
+  const bbU=c.addLineSeries({color:'rgba(94,139,255,.7)',lineWidth:1,priceLineVisible:false,lastValueVisible:false}), bbM=c.addLineSeries({color:'rgba(94,139,255,.35)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}), bbL=c.addLineSeries({color:'rgba(94,139,255,.7)',lineWidth:1,priceLineVisible:false,lastValueVisible:false});
+  const bbv=I.bb.slice(off); bbU.setData(vis.map((b,i)=>bbv[i]?{time:T(b.t),value:bbv[i].up}:{time:T(b.t)})); bbM.setData(vis.map((b,i)=>bbv[i]?{time:T(b.t),value:bbv[i].m}:{time:T(b.t)})); bbL.setData(vis.map((b,i)=>bbv[i]?{time:T(b.t),value:bbv[i].lo}:{time:T(b.t)}));
+  // daily VWAP from 5m sampled on tf bars
+  const m5=K[sym].m5, vw=vwapSeries(m5); const vmap=new Map(); m5.forEach((b,i)=>vmap.set(Math.floor(b.t/TFMS[tf])*TFMS[tf], vw[i]));
+  const vS=c.addLineSeries({color:'#f5a623',lineWidth:1,priceLineVisible:false,lastValueVisible:false}); vS.setData(vis.filter(b=>vmap.has(b.t)).map(b=>({time:T(b.t),value:vmap.get(b.t)})));
+  const vol=c.addHistogramSeries({priceScaleId:'vol',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false}); c.priceScale('vol').applyOptions({scaleMargins:{top:0.85,bottom:0}});
+  vol.setData(vis.map(b=>({time:T(b.t),value:b.v,color:b.c>=b.o?'rgba(38,166,154,.35)':'rgba(239,83,80,.35)'})));
+  // 24h range lines
+  const F=R[sym].F; if(F){ cs.createPriceLine({price:F.hi24,color:'rgba(239,83,80,.5)',lineWidth:1,lineStyle:3,title:'24h 고'}); cs.createPriceLine({price:F.lo24,color:'rgba(38,166,154,.5)',lineWidth:1,lineStyle:3,title:'24h 저'}); }
+  const bx=R[sym].box; if(+P.mode===2 && bx){ cs.createPriceLine({price:bx.hi,color:'rgba(245,166,35,.6)',lineWidth:1,lineStyle:1,title:`${P.boxN}일 고`}); cs.createPriceLine({price:bx.lo,color:'rgba(245,166,35,.6)',lineWidth:1,lineStyle:1,title:`${P.boxN}일 저`}); cs.createPriceLine({price:bx.lo+(bx.hi-bx.lo)*P.biasHi,color:'rgba(239,83,80,.35)',lineWidth:1,lineStyle:2,title:'숏 전환선'}); }
+  const p=R[sym].pos; if(p) cs.createPriceLine({price:p.avg,color:p.side==='LONG'?'#26a69a':'#ef5350',lineWidth:2,title:`모의 ${p.side==='LONG'?'롱':'숏'} 평단`});
+  cs.setMarkers(markerList(sym, tf, $('showWedom').checked, st));
+  $('mainLegend').innerHTML=`${NAME[sym]} ${tf} · 파랑 볼린저(20,2) · 주황 당일 VWAP · 점선 24시간 고/저`;
+  // RSI & Stoch
+  const rc=mk('rsiChart'); const rs=rc.addLineSeries({color:'#b38cff',lineWidth:1,priceLineVisible:false}); const rv=I.rsi.slice(off);
+  rs.setData(vis.map((b,i)=>rv[i]!=null?{time:T(b.t),value:rv[i]}:{time:T(b.t)})); rs.createPriceLine({price:70,color:'#555',lineStyle:2,lineWidth:1}); rs.createPriceLine({price:30,color:'#555',lineStyle:2,lineWidth:1});
+  const sc=mk('stChart'); const ss=sc.addLineSeries({color:'#3fd0ff',lineWidth:1,priceLineVisible:false}); const sv=I.st.slice(off);
+  ss.setData(vis.map((b,i)=>sv[i]!=null?{time:T(b.t),value:sv[i]}:{time:T(b.t)})); ss.createPriceLine({price:80,color:'#555',lineStyle:2,lineWidth:1}); ss.createPriceLine({price:20,color:'#555',lineStyle:2,lineWidth:1});
+  sync([c,rc,sc]);
+  c.timeScale().setVisibleLogicalRange({from:vis.length-300,to:vis.length+5});
+}
+function sync(list){ list.forEach(a=>a.timeScale().subscribeVisibleLogicalRangeChange(r=>{ if(!r) return; list.forEach(b=>{ if(b!==a) b.timeScale().setVisibleLogicalRange(r); }); })); }
+function drawEq(){
+  const c=mk('eqChart'); const colors={BTCUSDT:'#f7931a',ETHUSDT:'#8c9eff',XRPUSDT:'#3fd0ff'};
+  const tot=new Map();
+  for(const s of SYMS){ const ln=c.addLineSeries({color:colors[s],lineWidth:2,priceLineVisible:false,title:NAME[s]}); const data=R[s].eq.map(p=>({time:T(Math.floor(p.t/1800e3)*1800e3),value:p.v})); const dd=[]; for(const d of data){ if(dd.length&&dd[dd.length-1].time===d.time) dd[dd.length-1]=d; else dd.push(d);} ln.setData(dd); dd.forEach(d=>tot.set(d.time,(tot.get(d.time)||0)+d.value)); }
+  c.timeScale().fitContent();
+}
+// ---------------- render sim tab ----------------
+function renderCards(){
+  let tot=0, totCap=0;
+  const html = SYMS.map(s=>{ const r=R[s]; tot+=r.equity; totCap+=P.capital; const ret=(r.equity/P.capital-1)*100; const wins=r.trades.filter(t=>t.pnl>0).length;
+    const p=r.pos; const ps = p? `<span class="pill ${p.side[0]}">${p.side==='LONG'?'롱':'숏'} ${p.tr}차</span> ${fmt(p.qty*r.last,0)}$ · 평단 ${pfmt(p.avg)} · 미실현 <span class="${cls(r.unr)}">${fmt(r.unr)}</span>` : '<span class="mute">포지션 없음</span>';
+    return `<div class="card"><h3>${NAME[s]} (${s.replace('USDT','')}) · 현재가 ${pfmt(r.last)}</h3><div class="big ${cls(ret)}">$${fmt(r.equity)} <span style="font-size:14px">(${ret>=0?'+':''}${fmt(ret)}%)</span></div>
+    <div class="note">${ps}</div><div class="note">트레이드 ${r.trades.length}건 · 승률 ${r.trades.length?fmt(wins/r.trades.length*100,0):'-'}% · 최대낙폭 ${fmt(r.mdd)}% · 단순보유 ${r.bh>=0?'+':''}${fmt(r.bh)}%</div></div>`; }).join('');
+  const tr=(tot/totCap-1)*100;
+  $('cards').innerHTML = `<div class="card" style="max-width:260px"><h3>합계 ($${fmt(totCap,0)} 시작)</h3><div class="big ${cls(tr)}">$${fmt(tot)}</div><div class="${cls(tr)}">${tr>=0?'+':''}${fmt(tr)}%</div><div class="note">시작 ${P.start.replace('T',' ')} KST</div></div>` + html;
+}
+function renderSignals(){
+  $('signals').innerHTML = SYMS.map(s=>{ const f=R[s].F; if(!f) return '';
+    const cS=[[f.rsi15>=P.rsiS,`RSI15 ${fmt(f.rsi15,0)} ≥ ${P.rsiS}`],[f.pB>=P.pbS,`%B ${fmt(f.pB)} ≥ ${P.pbS}`],[f.pos24>=P.posS,`24h위치 ${fmt(f.pos24)} ≥ ${P.posS}`],[!+P.useVwap||f.vwap>0,`VWAP ${f.vwap>=0?'+':''}${fmt(f.vwap)}%`]];
+    const cL=[[f.rsi15<=P.rsiL,`RSI15 ≤ ${P.rsiL}`],[f.pB<=P.pbL,`%B ≤ ${P.pbL}`],[f.pos24<=P.posL,`24h위치 ≤ ${P.posL}`],[!+P.useVwap||f.vwap<0,'VWAP 아래']];
+    const nS=cS.filter(x=>x[0]).length, nL=cL.filter(x=>x[0]).length;
+    const r=R[s]; const bx=r.box; const biasTxt = +P.mode===2 && bx ? `<div style="margin-top:4px">${P.boxN}일 박스 위치 <b>${fmt(bx.p*100,0)}%</b> (${pfmt(bx.lo)}~${pfmt(bx.hi)}) · 코어 방향 <span class="pill ${r.bias>0?'L':r.bias<0?'S':''}">${r.bias>0?'롱':r.bias<0?'숏':'없음'}</span> <span class="note">(숏 전환 ≥${fmt(P.biasHi*100,0)}%, 롱 전환 ≤${fmt(P.biasLo*100,0)}%)</span></div>` : '';
+    return `<div class="card"><h3>${NAME[s]}</h3>${biasTxt}<div class="note">1시간 StochRSI ${fmt(f.st1h,0)}</div>
+      <div style="margin-top:6px"><span class="pill S">숏 ${nS}/4</span> ${cS.map(x=>`<span class="${x[0]?'ok':'mute'}">${x[1]}</span>`).join(' · ')}</div>
+      <div style="margin-top:4px"><span class="pill L">롱 ${nL}/4</span> ${cL.map(x=>`<span class="${x[0]?'ok':'mute'}">${x[1]}</span>`).join(' · ')}</div></div>`; }).join('');
+}
+const KIND={OPEN:'진입',ADD:'추가',TP:'익절',CUT:'물량조절',CLOSE:'청산',STOP:'손절'};
+function renderActs(){
+  const src = actSym==='ALL'? SYMS : [actSym];
+  const kinds = {ALL:null, ENTRY:['OPEN','ADD'], EXIT:['TP','CUT','CLOSE','STOP']}[actKind];
+  const full=src.flatMap(s=>R[s].acts).filter(a=>!kinds||kinds.includes(a.kind)).sort((a,b)=>b.t-a.t);
+  const all=full.slice(0,500);
+  $('actCount').textContent = `${full.length}건${full.length>500?' (최근 500건 표시)':''}`;
+  $('actTable').innerHTML = `<tr><th>시각(KST)</th><th>종목</th><th>구분</th><th>방향</th><th>수량($)</th><th>가격</th><th>평단</th><th>실현손익</th><th>사유</th></tr>` + all.map(a=>`<tr><td>${kst(a.t)}</td><td>${a.sym.replace('USDT','')}</td><td>${KIND[a.kind]}</td><td><span class="pill ${a.side[0]}">${a.side==='LONG'?'롱':'숏'}</span></td><td>${fmt(a.qty*a.price,0)}</td><td>${pfmt(a.price)}</td><td>${a.avg?pfmt(a.avg):'-'}</td><td class="${cls(a.pnl)}">${a.pnl!=null?fmt(a.pnl):''}</td><td class="mute">${a.reason}</td></tr>`).join('');
+}
+// ---------------- compare tab ----------------
+function renderCmp(){
+  const sym=cmpSym, w=W[sym], r=R[sym], st=startMs();
+  // agreement hourly
+  let both=0, agree=0, wOnly=0, sOnly=0, wIn=0;
+  const dirW=[], dirS=[];
+  for(let t=Math.ceil(st/H1)*H1; t<=Date.now(); t+=H1){ const a=dirAt(w.steps,t), b=simDirAt(r.acts,t); dirW.push({time:T(t),value:a}); dirS.push({time:T(t),value:b*0.85}); if(a) wIn++; if(a&&b){both++; if(a===b) agree++;} else if(a&&!b) wOnly++; else if(b&&!a) sOnly++; }
+  const total=dirW.length;
+  // match
+  const wEntries=w.ev.filter(e=>e.at>=st&&(e.type==='POSITION_OPEN'||e.type==='POSITION_INCREASE')&&e.p.size>=(sym==='BTCUSDT'?0.5:0));
+  const simEntries=r.acts.filter(a=>a.kind==='OPEN'||a.kind==='ADD');
+  const rows=wEntries.map(e=>{ const m=simEntries.filter(a=>a.side===e.p.side && Math.abs(a.t-e.at)<=3*H1).sort((x,y)=>Math.abs(x.t-e.at)-Math.abs(y.t-e.at))[0]; return {e,m}; });
+  const hit=rows.filter(x=>x.m).length;
+  const wPnl=w.trades.filter(t=>!t.open&&t.closeT>=st).reduce((a,t)=>a+t.pnl,0);
+  const wWin=w.trades.filter(t=>!t.open&&t.closeT>=st); const sRet=(r.equity/P.capital-1)*100;
+  $('cmpNote').textContent = w.ev.length? `웨돔 데이터: ${kst(w.ev[0].at)} ~ ${kst(w.ev[w.ev.length-1].at)} · ${w.ev.length}건 (갱신 ${kst(dataAt())})` : '이 종목 웨돔 매매 기록 없음';
+  $('cmpCards').innerHTML = `
+   <div class="card"><h3>방향 일치율 (둘 다 포지션 있을 때)</h3><div class="big">${both?fmt(agree/both*100,0):'-'}%</div><div class="note">${both}시간 중 ${agree}시간 같은 방향</div></div>
+   <div class="card"><h3>포지션 보유 시간 비중</h3><div class="big">${fmt(wIn/total*100,0)}% <span class="mute" style="font-size:13px">웨돔</span></div><div class="note">웨돔만 보유 ${wOnly}h · 모의만 보유 ${sOnly}h · 전체 ${total}h</div></div>
+   <div class="card"><h3>웨돔 진입 시점 포착률</h3><div class="big">${wEntries.length?fmt(hit/wEntries.length*100,0):'-'}%</div><div class="note">웨돔 진입·추가 ${wEntries.length}회 중 모의도 ±3시간 내 같은 방향 진입 ${hit}회</div></div>
+   <div class="card"><h3>실현 손익</h3><div class="note">웨돔 (실제 계좌, 시작일 이후 종료 트레이드)</div><div class="big ${cls(wPnl)}">$${fmt(wPnl,0)}</div><div class="note">승률 ${wWin.length?fmt(wWin.filter(t=>t.pnl>0).length/wWin.length*100,0):'-'}% · ${wWin.length}건 / 모의 $${fmt(P.capital,0)} → <span class="${cls(sRet)}">${sRet>=0?'+':''}${fmt(sRet)}%</span> · ${r.trades.length}건</div></div>`;
+  // chart
+  const c=mk('cmpChart'); const h1=K[sym].h1.filter(b=>b.t>=st-86400e3);
+  const cs=c.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'}); cs.setData(h1.map(b=>({time:T(b.t),open:b.o,high:b.h,low:b.l,close:b.c})));
+  cs.setMarkers(markerList(sym,'1h',true,st)); c.timeScale().fitContent();
+  const dc=mk('dirChart'); const l1=dc.addLineSeries({color:'#5e8bff',lineWidth:2,lineType:1,priceLineVisible:false,lastValueVisible:false}); const l2=dc.addLineSeries({color:'#f5a623',lineWidth:2,lineType:1,priceLineVisible:false,lastValueVisible:false}); l1.setData(dirW); l2.setData(dirS); dc.timeScale().fitContent();
+  sync([c,dc]);
+  // tables
+  $('wTrades').innerHTML = `<tr><th>진입</th><th>종료</th><th>방향</th><th>최대수량</th><th>평단→종료</th><th>손익($)</th></tr>` + w.trades.slice().reverse().map(t=>`<tr><td>${kst(t.openT)}</td><td>${t.open?'<span class="warn">보유 중</span>':kst(t.closeT)}</td><td><span class="pill ${t.side[0]}">${t.side==='LONG'?'롱':'숏'}</span></td><td>${fmt(t.maxQty,sym==='XRPUSDT'?0:2)}</td><td>${t.avg?pfmt(t.avg)+' → '+pfmt(t.exit):'-'}</td><td class="${cls(t.pnl)}">${fmt(t.pnl,0)}</td></tr>`).join('');
+  const sT=r.trades.slice(); if(r.pos) sT.push({side:r.pos.side,openT:r.pos.openT,open:true,avg:r.pos.avg,exit:r.last,maxQty:r.pos.maxQty,tr:r.pos.tr,pnl:r.pos.realized+r.unr-r.pos.fees,notional:r.pos.maxQty*r.pos.avg});
+  $('sTrades').innerHTML = `<tr><th>진입</th><th>종료</th><th>방향</th><th>분할</th><th>평단→종료</th><th>손익($)</th></tr>` + sT.reverse().map(t=>`<tr><td>${kst(t.openT)}</td><td>${t.open?'<span class="warn">보유 중</span>':kst(t.closeT)}</td><td><span class="pill ${t.side[0]}">${t.side==='LONG'?'롱':'숏'}</span></td><td>${t.tr}</td><td>${pfmt(t.avg)} → ${pfmt(t.exit)}</td><td class="${cls(t.pnl)}">${fmt(t.pnl)}</td></tr>`).join('');
+  $('matchTable').innerHTML = `<tr><th>웨돔 시각</th><th>구분</th><th>방향</th><th>수량</th><th>가격</th><th>모의 반응</th><th>시간차</th><th>방송</th></tr>` + rows.slice().reverse().map(({e,m})=>`<tr><td>${kst(e.at)}</td><td>${e.type==='POSITION_OPEN'?'진입':'추가'}</td><td><span class="pill ${e.p.side[0]}">${e.p.side==='LONG'?'롱':'숏'}</span></td><td>${e.prev!=null?fmt(e.prev,2)+'→':''}${fmt(e.p.size,2)}</td><td>${pfmt(e.mark)}</td><td>${m?`<span class="ok">${KIND[m.kind]} @${pfmt(m.price)}</span>`:'<span class="mute">없음</span>'}</td><td>${m?((m.t-e.at)/60e3>0?'+':'')+Math.round((m.t-e.at)/60e3)+'분':''}</td><td class="mute">${e.video||''}</td></tr>`).join('');
+}
+// ---------------- news tab ----------------
+const CAT={crypto:'코인',rates_fed:'금리/연준',inflation_cpi:'물가',geopolitics_war:'지정학/전쟁',oil_commodities:'유가/원자재',equity_index:'주식',ai:'AI',regulation_policy:'규제/정책',bonds:'채권',fx:'환율',politics_election:'정치',filing_ma:'공시/M&A',theme_surge:'테마',jobs_labor:'고용',gdp_macro:'경기',tariff_trade:'관세/무역'};
+const SENT={LONG:['호재','up'],SHORT:['악재','down'],NEUTRAL:['중립','mute']};
+function renderNews(){
+  const cat=$('nCat').value, se=$('nSenti').value, sc=+$('nScore').value||0, q=$('nQ').value.trim().toLowerCase();
+  const list=D.news.filter(n=>(!cat||(n.cats||[]).includes(cat))&&(!se||n.senti===se)&&(n.score||0)>=sc&&(!q||(n.title+' '+(n.impact||'')).toLowerCase().includes(q)));
+  $('newsList').innerHTML = list.slice(0,300).map(n=>{ const s=SENT[n.senti]||['-','mute']; return `<div class="news-item"><div class="note">${kst(n.t)} · ${n.src||''} · 점수 <b>${n.score??'-'}</b> · <span class="${s[1]}">${s[0]}</span> ${(n.cats||[]).map(c=>`<span class="pill">${CAT[c]||c}</span>`).join('')}</div><a href="${n.url}" target="_blank">${n.title}</a>${n.impact?`<div class="imp">${n.impact}</div>`:''}</div>`; }).join('') || '<div class="news-item mute">조건에 맞는 뉴스가 없어요.</div>';
+  $('newsMeta').innerHTML = `수집 ${D.news.length}건 · 마지막 갱신 ${kst(dataAt())} KST`;
+}
+function renderTimeline(){
+  $('timeline').innerHTML = D.timeline.slice().reverse().map(x=>`<div class="news-item"><div class="note">${x.d} · <span class="${x.tag==='호재'?'up':x.tag==='악재'?'down':'warn'}">${x.tag}</span></div>${x.url?`<a href="${x.url}" target="_blank">${x.txt}</a>`:`<b>${x.txt}</b>`}</div>`).join('');
+}
+function drawNewsChart(){
+  const c=mk('newsChart'); const st=Math.min(startMs(), Date.parse('2026-09-25T00:00:00Z')); const h1=K.BTCUSDT.h1.filter(b=>b.t>=st);
+  const cs=c.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'}); cs.setData(h1.map(b=>({time:T(b.t),open:b.o,high:b.h,low:b.l,close:b.c})));
+  const first=h1[0].t, last=h1[h1.length-1].t; const mk2=[];
+  for(const x of D.timeline){ const t=Date.parse(x.d+'T13:00:00Z'); if(t<first||t>last) continue; mk2.push({time:T(Math.floor(t/H1)*H1),position:x.tag==='호재'?'belowBar':'aboveBar',color:x.tag==='호재'?'#26a69a':x.tag==='악재'?'#ef5350':'#f5a623',shape:x.tag==='호재'?'arrowUp':'arrowDown',text:x.txt.slice(0,14)}); }
+  for(const n of D.news){ if((n.score||0)<70||n.t<first||n.t>last||n.senti==='NEUTRAL') continue; mk2.push({time:T(Math.floor(n.t/H1)*H1),position:n.senti==='LONG'?'belowBar':'aboveBar',color:n.senti==='LONG'?'#26a69a':'#ef5350',shape:'circle',size:0.6}); }
+  cs.setMarkers(mk2.sort((a,b)=>a.time-b.time)); c.timeScale().fitContent();
+}
+async function loadFng(){ try{ const j=await (await fetch('https://api.alternative.me/fng/?limit=8')).json(); const d=j.data[0]; const v=+d.value; $('fng').innerHTML=`<span class="${v>=55?'up':v<=45?'down':''}">${v}</span> <span style="font-size:14px">${({'Extreme Fear':'극단적 공포','Fear':'공포','Neutral':'중립','Greed':'탐욕','Extreme Greed':'극단적 탐욕'})[d.value_classification]||d.value_classification}</span>`; $('fngNote').textContent='최근 7일: '+j.data.slice(1).map(x=>x.value).join(' · '); }catch(e){ $('fng').textContent='불러오기 실패'; } }
+// ---------------- backtest ----------------
+const BT_SRC = {
+  BTCUSDT: [['binanceF', Date.UTC(2019,8,8)], ['binanceS', Date.UTC(2017,7,17)], ['bitstamp', Date.UTC(2011,8,13)]],
+  ETHUSDT: [['binanceF', Date.UTC(2019,10,27)], ['binanceS', Date.UTC(2017,7,17)], ['coinbase', Date.UTC(2016,4,18)]],
+  XRPUSDT: [['binanceF', Date.UTC(2020,0,6)], ['binanceS', Date.UTC(2018,4,4)], ['bitstamp', Date.UTC(2016,11,16)]],
+};
+const SRCNAME = {binanceF:'바이낸스 선물', binanceS:'바이낸스 현물', bitstamp:'비트스탬프 현물', coinbase:'코인베이스 현물'};
+const BT_PAIR = {bitstamp:{BTCUSDT:'btcusd',ETHUSDT:'ethusd',XRPUSDT:'xrpusd'}, coinbase:{BTCUSDT:'BTC-USD',ETHUSDT:'ETH-USD',XRPUSDT:'XRP-USD'}};
+const WARM = 8*86400e3;
+const sleepMs = ms => new Promise(r=>setTimeout(r,ms));
+const idb = (()=>{ let dbp=null; const open=()=>dbp||(dbp=new Promise((res,rej)=>{ try{ const r=indexedDB.open('wedomBT',1); r.onupgradeneeded=()=>r.result.createObjectStore('m'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }catch(e){ rej(e); } }));
+  const op=(mode,fn)=>open().then(db=>new Promise(res=>{ try{ const tx=db.transaction('m',mode); const st=tx.objectStore('m'); const q=fn(st); tx.oncomplete=()=>res(q&&q.result); tx.onerror=()=>res(undefined); }catch(e){ res(undefined); } })).catch(()=>undefined);
+  return { get:k=>op('readonly',s=>s.get(k)), set:(k,v)=>op('readwrite',s=>s.put(v,k)), clear:()=>op('readwrite',s=>s.clear()) }; })();
+async function getJSON(u, tries=6){ const wait=[2000,4000,8000,15000,30000,45000]; for(let i=0;i<tries;i++){ try{ const r=await fetch(u); if(r.status===429||r.status===418||r.status>=500){ if(typeof btStatus==='function') btStatus('거래소 요청 제한에 걸려 잠시 기다리는 중... ('+(i+1)+'/'+tries+')'); await sleepMs(wait[i]); continue; } return await r.json(); }catch(e){ if(i===tries-1) throw e; await sleepMs(wait[i]); } } throw new Error('거래소 요청 제한 (잠시 후 다시 시도해주세요)'); }
+async function fetchRange(src, sym, tf, s, e){ // returns [[t,o,h,l,c,v],...]
+  const out=[]; const ms=tf;
+  if(src==='binanceF'||src==='binanceS'){
+    const iv = tf===M5?'5m':'15m'; const lim = src==='binanceF'?1500:1000;
+    let x=s; while(x<e){
+      const u = src==='binanceF' ? `https://fapi.binance.com/fapi/v1/klines?symbol=${sym}&interval=${iv}&startTime=${x}&endTime=${e-1}&limit=${lim}` : `https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${iv}&startTime=${x}&endTime=${e-1}&limit=${lim}`;
+      let j; try{ j=await getJSON(u); }catch(err){ if(src==='binanceS') j=await getJSON(u.replace('https://api.binance.com','https://data-api.binance.vision')); else throw err; }
+      if(!Array.isArray(j)||!j.length) break;
+      for(const k of j) out.push([k[0],+k[1],+k[2],+k[3],+k[4],+k[5]]);
+      x=j[j.length-1][0]+ms; if(j.length<lim) break;
+    }
+  } else if(src==='bitstamp'){
+    const step=ms/1000; let x=Math.floor(s/1000);
+    while(x*1000<e){
+      const j=await getJSON(`https://www.bitstamp.net/api/v2/ohlc/${BT_PAIR.bitstamp[sym]}/?step=${step}&limit=1000&start=${x}`);
+      const o=(j.data&&j.data.ohlc)||[];
+      if(!o.length){ x+=1000*step; continue; }
+      for(const k of o){ const t=k.timestamp*1000; if(t>=s&&t<e) out.push([t,+k.open,+k.high,+k.low,+k.close,+k.volume]); }
+      const lt=+o[o.length-1].timestamp; x = lt+step > x ? lt+step : x+1000*step;
+    }
+  } else if(src==='coinbase'){
+    const g=ms/1000; let x=s;
+    while(x<e){
+      const y=Math.min(e, x+300*ms);
+      const j=await getJSON(`https://api.exchange.coinbase.com/products/${BT_PAIR.coinbase[sym]}/candles?granularity=${g}&start=${new Date(x).toISOString()}&end=${new Date(y-1).toISOString()}`);
+      if(Array.isArray(j)) for(const k of j){ const t=k[0]*1000; if(t>=x&&t<y) out.push([t,+k[3],+k[2],+k[1],+k[4],+k[5]]); }
+      x=y; await sleepMs(120);
+    }
+  }
+  out.sort((a,b)=>a[0]-b[0]); const ded=[]; for(const k of out){ if(!ded.length||ded[ded.length-1][0]!==k[0]) ded.push(k); }
+  return ded;
+}
+async function loadBars(src, sym, tf, s, e, prog){
+  const months=[]; const d=new Date(s); let y=d.getUTCFullYear(), m=d.getUTCMonth();
+  while(Date.UTC(y,m,1)<e){ months.push([Date.UTC(y,m,1), Date.UTC(y,m+1,1)]); m++; if(m>11){m=0;y++;} }
+  const res=new Array(months.length); let done=0, cached=0; const now=Date.now();
+  const conc = src==='coinbase'||src==='binanceF'?2:4; let next=0;
+  async function worker(){ while(next<months.length){ const k=next++; const [ms0,me0]=months[k]; const key=`${src}|${sym}|${tf}|${ms0}`; const complete = me0 < now-3600e3;
+      let arr = complete? await idb.get(key) : undefined;
+      if(arr){ cached++; } else { arr = await fetchRange(src, sym, tf, ms0, Math.min(me0, now)); if(complete && arr.length) await idb.set(key, arr); }
+      res[k]=arr; done++; prog && prog(done, months.length, cached); } }
+  await Promise.all(Array.from({length:conc}, worker));
+  const bars=[]; for(const arr of res) for(const k of arr||[]) if(k[0]>=s&&k[0]<e) bars.push({t:k[0],o:k[1],h:k[2],l:k[3],c:k[4],v:k[5]});
+  return bars;
+}
+function pickSource(sym, start){ const list=BT_SRC[sym]; for(const [src,lst] of list){ if(start-WARM>=lst) return {src, listing:lst}; } const [src,lst]=list[list.length-1]; return {src, listing:lst, clamped:true}; }
+function statsOf(r, capital){
+  const tr=r.trades; const wins=tr.filter(t=>t.pnl>0), loss=tr.filter(t=>t.pnl<=0);
+  const gw=wins.reduce((a,t)=>a+t.pnl,0), gl=-loss.reduce((a,t)=>a+t.pnl,0);
+  const yrs=Math.max((r.lastT-r.st)/(365.25*86400e3), 1/365);
+  const ret=(r.equity/capital-1)*100; const cagr = r.equity>0? (Math.pow(r.equity/capital, 1/yrs)-1)*100 : -100;
+  const holdH = tr.length? tr.reduce((a,t)=>a+(t.closeT-t.openT),0)/tr.length/3600e3 : 0;
+  return {ret, cagr, mdd:r.mdd, n:tr.length, win: tr.length? wins.length/tr.length*100 : 0, pf: gl>0? gw/gl : (gw>0?Infinity:0), holdH, yrs, fees:r.fees};
+}
+function yearly(daily){ const by=new Map(); for(const d of daily){ const y=new Date(d.t+KST).getUTCFullYear(); if(!by.has(y)) by.set(y,{first:d,last:d}); else by.get(y).last=d; }
+  const out=new Map(); let prev=null; for(const [y,o] of [...by.entries()].sort((a,b)=>a[0]-b[0])){ const s=prev? prev.last : o.first; out.set(y, { r: s.v>0? (o.last.v/s.v-1)*100 : null, bh:(o.last.px/s.px-1)*100 }); prev=o; } return out; }
+let BT=null, btSym=null, btLog=true, btTrMode='ALL';
+function btStatus(t){ $('btStatus').innerHTML=t; }
+function sidewaysSegments(daily, PP, minDays, box){
+  const R3=classifyRegime(daily, PP); const segs=[]; let cur=null;
+  for(let i=0;i<R3.length;i++){ const x=R3[i]; if(x.e50==null) continue; let side = x.reg==='SIDE';
+    if(side && box>0){ const w=daily.slice(Math.max(0,i-29), i+1); const hi=Math.max(...w.map(b=>b.h)), lo=Math.min(...w.map(b=>b.l)); if((hi/lo-1)*100>=box) side=false; }
+    if(side){ if(!cur) cur={s:x.t,e:x.t}; else cur.e=x.t; } else if(cur){ cur.next = x.reg==='SIDE' ? '박스 확대' : REGNAME[x.reg]; segs.push(cur); cur=null; } }
+  if(cur){ cur.next='진행 중'; segs.push(cur); }
+  return segs.map(s=>({...s, days:(s.e-s.s)/86400e3+1})).filter(s=>s.days>=minDays);
+}
+function runSegments(sym, bars, tf, modes, REGD, opt){
+  const segs=sidewaysSegments(REGD, P, opt.minDays, opt.box); const rows=[];
+  const bs=t=>{ let lo=0,hi=bars.length; while(lo<hi){ const m=(lo+hi)>>1; if(bars[m].t<t) lo=m+1; else hi=m; } return lo; };
+  for(const sg of segs){ const st=sg.s+86400e3, en=Math.min(sg.e+2*86400e3-1, opt.end); if(en<=st) continue; const i0=bs(st-10*86400e3), i1=bs(en+tf);
+    const sb=bars.slice(i0,i1); if(sb.length<200 || sb[0].t>st-2*86400e3) continue; const seg=sb.filter(b=>b.t>=st&&b.t<en); if(seg.length<50) continue;
+    const sh1=agg(sb,H1), F=featuresBars(sb,sh1,tf), BX=boxBars(sb,sh1,tf,+P.boxN), RG = opt.def ? regimeBars(sb,sh1,tf,{...P,trend:1}) : new Array(sb.length).fill(0);
+    const hi=Math.max(...seg.map(b=>b.h)), lo=Math.min(...seg.map(b=>b.l)); const row={...sg, st, en, range:(hi/lo-1)*100, bh:(seg[seg.length-1].c/seg[0].o-1)*100, res:{}};
+    for(const m of modes){ const r=runStrategy(m,{sym, base:sb, h1:sh1, ms:tf, st, en, compound:false, eqStep:Math.max(1,Math.floor(sb.length/400)), BX, RG}, F, P); const cut=st+(en-st)*0.8; const ea=r.eq.filter(p=>p.t<=cut);
+      row.res[m]={ret:(r.equity/P.capital-1)*100, mdd:r.mdd, n:r.trades.length, late: ea.length? (r.equity-ea[ea.length-1].v)/P.capital*100 : 0}; }
+    rows.push(row); }
+  return rows; }
+let btSegSym=null;
+function renderSeg(){
+  if(!BT||!BT.seg){ $('btSegWrap').style.display='none'; return; } $('btSegWrap').style.display='';
+  const f=(x,d=1)=>pct(x,d); let sum='<tr><th>종목</th><th>전략</th><th>구간 수</th><th>이긴 구간</th><th>중앙값</th><th>평균</th><th>최고</th><th>최악</th><th>막판 20% 평균</th><th>구간 이어 붙인 누적</th><th>같은 구간 단순보유 (평균 / 누적)</th></tr>';
+  for(const sym of BT.syms){ const it=BT.items[sym]; if(!it||!it.segs) continue; const rows=it.segs; if(!rows.length){ sum+=`<tr><td>${NAME[sym]}</td><td colspan="10" class="mute">기간 안에 조건에 맞는 횡보장 구간이 없어요</td></tr>`; continue; }
+    const bhA=rows.reduce((a,r)=>a+r.bh,0)/rows.length, bhC=(rows.reduce((a,r)=>a*(1+r.bh/100),1)-1)*100;
+    for(const m of BT.modes){ const v=rows.map(r=>r.res[m].ret), srt=[...v].sort((a,b)=>a-b), win=v.filter(x=>x>0).length, chain=(v.reduce((a,x)=>a*(1+x/100),1)-1)*100, late=rows.reduce((a,r)=>a+r.res[m].late,0)/rows.length;
+      sum+=`<tr><td>${NAME[sym]}</td><td>${MODEN[m]}</td><td>${rows.length}</td><td>${win} (${fmt(win/rows.length*100,0)}%)</td><td>${f(srt[Math.floor(srt.length/2)])}</td><td>${f(v.reduce((a,b)=>a+b,0)/v.length)}</td><td>${f(srt[srt.length-1])}</td><td>${f(srt[0])}</td><td>${f(late)}p</td><td>${f(chain)}</td><td>${f(bhA)} / ${f(bhC)}</td></tr>`; } }
+  $('btSegSum').innerHTML=sum;
+  const o=BT.segOpt; const tot=BT.syms.reduce((a,s)=>a+((BT.items[s]&&BT.items[s].segs)||[]).length,0);
+  $('btSegNote').innerHTML=`BTC 일봉 장분위기 기준 횡보장 ${o.minDays}일 이상${o.box>0?' · 30일 고저폭 '+o.box+'% 미만':''}${o.def?' · 구간 안 박스 이탈 방어 켬':''} · 구간마다 $${fmt(P.capital,0)} 고정 사이즈로 새로 시작 · 구간 종료 시 보유 포지션은 평가손익 포함`;
+  const syms=BT.syms.filter(s=>BT.items[s]&&BT.items[s].segs&&BT.items[s].segs.length); if(!syms.includes(btSegSym)) btSegSym=syms[0];
+  seg('btSegSym', syms.map(s=>[s,NAME[s]]), btSegSym, v=>{btSegSym=v; renderSeg();});
+  const rows=btSegSym? BT.items[btSegSym].segs.slice().reverse() : [];
+  $('btSegTable').innerHTML='<tr><th>구간 (KST)</th><th>일수</th><th>고저폭</th><th>단순보유</th><th>다음 장분위기</th>'+BT.modes.map(m=>`<th>v${m} 수익</th><th>v${m} 막판20%</th><th>v${m} 낙폭</th><th>v${m} 거래</th>`).join('')+'</tr>'+
+    rows.map(r=>`<tr><td>${new Date(r.st+KST).toISOString().slice(0,10)} ~ ${new Date(r.en+KST).toISOString().slice(0,10)}</td><td>${r.days}</td><td>${fmt(r.range,0)}%</td><td>${f(r.bh)}</td><td>${r.next}</td>`+BT.modes.map(m=>{ const x=r.res[m]; return `<td>${f(x.ret)}</td><td>${f(x.late)}p</td><td class="down">${fmt(x.mdd,0)}%</td><td>${x.n}</td>`; }).join('')+'</tr>').join('');
+}
+async function runBacktest(){
+  const syms=[...document.querySelectorAll('.btSym:checked')].map(x=>x.value), modes=[...document.querySelectorAll('.btMode:checked')].map(x=>+x.value);
+  if(!syms.length||!modes.length){ btStatus('<span class="warn">종목과 전략을 하나 이상 골라주세요.</span>'); return; }
+  const start=Date.parse($('btStart').value+'T00:00:00+09:00'), end=Math.min(Date.parse($('btEnd').value+'T23:59:59+09:00'), Date.now());
+  if(!(end>start)){ btStatus('<span class="warn">기간을 확인해주세요.</span>'); return; }
+  const tf = +$('btTf').value, compound = $('btComp').value==='1';
+  if(tf===M5 && end-start>4*365*86400e3){ btStatus('<span class="warn">5분봉은 4년 이하 기간만 지원해요. 15분봉을 쓰거나 기간을 줄여주세요.</span>'); return; }
+  $('btRun').disabled=true; const t0=Date.now(); const out={syms, modes, tf, compound, start, end, items:{}, cap:+P.capital};
+  try{
+    const segMode=$('btSeg').checked, segOpt={minDays:+$('btSegMin').value||14, box:+$('btSegBox').value||0, def:$('btSegDef').checked, end};
+    let REGD=null; if(+P.trend>=3 || segMode){ btStatus('BTC 일봉(장분위기 판별용) 불러오는 중...'); REGD=await btcDailyRange(start-220*86400e3, end); }
+    for(const sym of syms){
+      const pk=pickSource(sym, start); const st = pk.clamped? Math.max(start, pk.listing+WARM) : start;
+      btStatus(`${NAME[sym]}: ${SRCNAME[pk.src]} ${tf===M5?'5분':'15분'}봉 불러오는 중...`);
+      const prog=(d,n,c)=>btStatus(`${NAME[sym]}: ${SRCNAME[pk.src]} ${tf===M5?'5분':'15분'}봉 불러오는 중 ${d}/${n}개월 (저장된 데이터 ${c}개월)`);
+      let bars; try{ bars=await loadBars(pk.src, sym, tf, st-WARM, end+tf, prog); }catch(err){ const alt=BT_SRC[sym].find(([s2,l2])=>s2!==pk.src && s2!=='binanceF' && st-WARM>=l2); if(!alt) throw err; pk.src=alt[0]; bars=await loadBars(pk.src, sym, tf, st-WARM, end+tf, prog); }
+      if(bars.length<500){ out.items[sym]={err:`${NAME[sym]} 데이터를 충분히 받지 못했어요 (${bars.length}개).`}; continue; }
+      btStatus(`${NAME[sym]}: 지표 계산 중 (${bars.length.toLocaleString()}개 봉)...`); await sleepMs(30);
+      const h1=agg(bars,H1); const F=featuresBars(bars,h1,tf); const BX=boxBars(bars,h1,tf,+P.boxN); const RG=regimeBars(bars,h1,tf,P,REGD);
+      const eqStep=Math.max(1, Math.floor(bars.length/3000));
+      const runs={};
+      for(const mode of modes){ btStatus(`${NAME[sym]}: v${mode} 전략 계산 중...`); await sleepMs(20); const r=runStrategy(mode, {sym, base:bars, h1, ms:tf, st, en:end, compound, eqStep, BX, RG}, F, P); runs[mode]={r, s:statsOf(r, out.cap), y:yearly(r.daily)}; }
+      const bhDaily=[]; let lastDay=-1, firstC=null, lastC=null, lastT=null; for(const b of bars){ const t=b.t+tf; if(t<st||t>end) continue; if(firstC==null) firstC=b.c; lastC=b.c; lastT=t; const day=Math.floor((t+KST)/86400e3); if(day!==lastDay){ bhDaily.push({t,px:b.c}); lastDay=day; } } if(lastT) bhDaily.push({t:lastT,px:lastC});
+      const bhY=new Map(); { let prev=null; const by=new Map(); for(const d of bhDaily){ const y=new Date(d.t+KST).getUTCFullYear(); if(!by.has(y)) by.set(y,{first:d,last:d}); else by.get(y).last=d; } for(const [y,o] of [...by.entries()].sort((a,b)=>a[0]-b[0])){ const s=prev?prev.last:o.first; bhY.set(y,(o.last.px/s.px-1)*100); prev=o; } }
+      let segRows=null; if(segMode && REGD && REGD.length){ btStatus(`${NAME[sym]}: 횡보장 구간별 계산 중...`); await sleepMs(20); segRows=runSegments(sym, bars, tf, modes, REGD, segOpt); }
+      out.items[sym]={segs:segRows, src:pk.src, clamped:pk.clamped && start<st, st, en:lastT, bars:bars.length, runs, bh:firstC?(lastC/firstC-1)*100:0, firstC, lastC, bhDaily, bhY};
+    }
+    out.seg=segMode; out.segOpt=segOpt;
+    BT=out; btSym=syms.find(s=>!out.items[s].err)||syms[0]; renderBT();
+    btStatus(`완료 · ${((Date.now()-t0)/1000).toFixed(1)}초 · 파라미터는 '전략 설정' 탭 값을 사용했어요 (시작 시각·전략 버전 제외).`);
+  }catch(e){ console.error(e); btStatus(`<span class="down">실패: ${e.message}</span>`); }
+  $('btRun').disabled=false;
+}
+const MODEN = {1:'v1 단타 역추세', 2:'v2 스윙 코어'};
+const pct = (x,d=1) => x==null||!isFinite(x)? '-' : `<span class="${cls(x)}">${x>=0?'+':''}${fmt(x,d)}%</span>`;
+function renderBT(){
+  if(!BT) return; const cap=BT.cap;
+  let rows='';
+  for(const sym of BT.syms){ const it=BT.items[sym]; if(it.err){ rows+=`<tr><td>${NAME[sym]}</td><td colspan="11" class="warn">${it.err}</td></tr>`; continue; }
+    const per = `${kst(it.st).slice(0,5).replace('-','/')} ${new Date(it.st+KST).getUTCFullYear()} ~ ${new Date(it.en+KST).toISOString().slice(0,10)}`;
+    for(const mode of BT.modes){ const {r,s}=it.runs[mode];
+      rows+=`<tr><td>${NAME[sym]}</td><td>${MODEN[mode]}</td><td class="mute">${SRCNAME[it.src]}<br>${new Date(it.st+KST).toISOString().slice(0,10)} ~ ${new Date(it.en+KST).toISOString().slice(0,10)}${it.clamped?' <span class="warn">(데이터 시작일로 조정)</span>':''}</td><td>${r.dead?'<span class="down">$0 (계좌 소멸 '+new Date(r.lastT+KST).toISOString().slice(0,10)+')</span>':'$'+fmt(r.equity,0)}</td><td>${pct(s.ret)}</td><td>${pct(s.cagr)}</td><td class="down">${fmt(s.mdd,1)}%</td><td>${s.n.toLocaleString()}</td><td>${fmt(s.win,0)}%</td><td>${isFinite(s.pf)?fmt(s.pf,2):'∞'}</td><td>${s.holdH>=48?fmt(s.holdH/24,1)+'일':fmt(s.holdH,1)+'시간'}</td><td>${pct(it.bh)}</td></tr>`; }
+  }
+  $('btSummary').innerHTML = `<tr><th>종목</th><th>전략</th><th>데이터 · 기간</th><th>최종 자산</th><th>총수익률</th><th>연환산</th><th>최대낙폭</th><th>트레이드</th><th>승률</th><th>손익비(PF)</th><th>평균 보유</th><th>단순보유</th></tr>`+rows;
+  // yearly
+  const cols=[]; for(const sym of BT.syms){ const it=BT.items[sym]; if(it.err) continue; for(const mode of BT.modes) cols.push({sym,mode,y:it.runs[mode].y}); cols.push({sym,bh:true,y:it.bhY}); }
+  const years=[...new Set(cols.flatMap(c=>[...c.y.keys()]))].sort();
+  $('btYearly').innerHTML = `<tr><th>연도</th>${cols.map(c=>`<th>${c.sym.replace('USDT','')} ${c.bh?'단순보유':'v'+c.mode}</th>`).join('')}</tr>` + years.map(y=>`<tr><td>${y}</td>${cols.map(c=>{ const v=c.y.get(y); return `<td>${v==null? '-' : pct(c.bh? v : v.r)}</td>`; }).join('')}</tr>`).join('');
+  seg('btSymSeg', BT.syms.filter(s=>!BT.items[s].err).map(s=>[s,NAME[s]]), btSym, v=>{btSym=v; drawBT(); renderBTTrades();});
+  seg('btTrSeg', [['ALL','전체 전략'], ...BT.modes.map(m=>[String(m),MODEN[m]])], btTrMode, v=>{btTrMode=v; renderBTTrades();});
+  drawBT(); renderBTTrades(); renderSeg();
+}
+function drawBT(){
+  if(!BT||!btSym) return; const it=BT.items[btSym]; if(!it||it.err) return; const cap=BT.cap;
+  const c=mk('btChart'); c.applyOptions({rightPriceScale:{mode: btLog?1:0}});
+  const colors={1:'#5e8bff',2:'#f5a623'};
+  for(const mode of BT.modes){ const r=it.runs[mode].r; const ln=c.addLineSeries({color:colors[mode],lineWidth:2,priceLineVisible:false,title:MODEN[mode]}); const dd=[]; for(const p of r.eq){ const tt=T(p.t); if(dd.length&&dd[dd.length-1].time>=tt) continue; dd.push({time:tt,value:Math.max(p.v,1)}); } ln.setData(dd); }
+  const bh=c.addLineSeries({color:'rgba(200,205,215,.55)',lineWidth:1,priceLineVisible:false,title:'단순보유'}); const db=[]; for(const p of it.bhDaily){ const tt=T(p.t); if(db.length&&db[db.length-1].time>=tt) continue; db.push({time:tt,value:Math.max(cap*p.px/it.firstC,1)}); } bh.setData(db);
+  c.timeScale().fitContent();
+  $('btLegend').innerHTML = `${NAME[btSym]} 계좌 곡선 · 파랑 v1 · 주황 v2 · 회색 단순보유 ($${fmt(cap,0)} 시작${BT.compound?', 복리':', 고정 사이즈'})`;
+}
+function renderBTTrades(){
+  if(!BT||!btSym) return; const it=BT.items[btSym]; if(!it||it.err){ $('btTrades').innerHTML=''; return; }
+  const all=BT.modes.filter(m=>btTrMode==='ALL'||String(m)===btTrMode).flatMap(m=>it.runs[m].r.trades).sort((a,b)=>b.openT-a.openT);
+  $('btTrCount').textContent=`${all.length.toLocaleString()}건${all.length>500?' (최근 500건 표시, 전체는 CSV)':''}`;
+  $('btTrades').innerHTML=`<tr><th>전략</th><th>진입</th><th>종료</th><th>방향</th><th>분할</th><th>평단→종료</th><th>손익($)</th></tr>`+all.slice(0,500).map(t=>`<tr><td>v${t.mode}</td><td>${new Date(t.openT+KST).toISOString().slice(0,16).replace('T',' ')}</td><td>${new Date(t.closeT+KST).toISOString().slice(0,16).replace('T',' ')}</td><td><span class="pill ${t.side[0]}">${t.side==='LONG'?'롱':'숏'}</span></td><td>${t.tr}</td><td>${pfmt(t.avg)} → ${pfmt(t.exit)}</td><td class="${cls(t.pnl)}">${fmt(t.pnl)}</td></tr>`).join('');
+}
+function btCSV(){
+  if(!BT) return; const lines=['symbol,strategy,side,open_kst,close_kst,tranches,avg,exit,pnl_usd'];
+  for(const sym of BT.syms){ const it=BT.items[sym]; if(it.err) continue; for(const m of BT.modes) for(const t of it.runs[m].r.trades) lines.push([sym,'v'+m,t.side,new Date(t.openT+KST).toISOString().slice(0,16).replace('T',' '),new Date(t.closeT+KST).toISOString().slice(0,16).replace('T',' '),t.tr,t.avg,t.exit,t.pnl.toFixed(2)].join(',')); }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv'})); a.download='wedom_backtest_trades.csv'; a.click();
+}
+function btPreset(k){ const today=new Date(Date.now()+KST).toISOString().slice(0,10); const ago=d=>new Date(Date.now()+KST-d*86400e3).toISOString().slice(0,10);
+  const map={max:['2011-09-22',today], a:['2011-09-22','2023-12-31'], b:['2018-01-01','2023-12-31'], c:['2020-01-01',today], y1:[ago(365),today], m3:[ago(90),today]};
+  const [s,e]=map[k]; $('btStart').value=s; $('btEnd').value=e; if(k==='m3'||k==='y1'){} }
+
+// ---------------- params ----------------
+function renderParams(){ $('params').innerHTML = Object.keys(DEF).map(k=>`<div><label>${PDESC[k][0]}</label><input id="p_${k}" type="${PDESC[k][1]||'number'}" step="any" value="${P[k]}"></div>`).join(''); }
+$('applyP').onclick=()=>{ const old=P.start; for(const k of Object.keys(DEF)){ const v=$('p_'+k).value; P[k]= (PDESC[k][1]==='text'||PDESC[k][1]==='datetime-local')? v : +v; } localStorage.setItem('wedomP',JSON.stringify(P)); $('cfgNote').textContent='계산 중...'; (old!==P.start? boot() : runAll()).then(()=>$('cfgNote').textContent='적용 완료'); };
+$('resetP').onclick=()=>{ P=Object.assign({},DEF); localStorage.removeItem('wedomP'); renderParams(); };
+// ---------------- UI wiring ----------------
+function seg(id, items, cur, on){ $(id).innerHTML=items.map(([v,l])=>`<button data-v="${v}" class="${v===cur?'on':''}">${l}</button>`).join(''); $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ $(id).querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); on(b.dataset.v); }); }
+let activeTab='sim';
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); $('tab-'+b.dataset.tab).classList.add('on'); activeTab=b.dataset.tab; drawActive(); });
+seg('symSeg', SYMS.map(s=>[s,NAME[s]]), curSym, v=>{curSym=v; drawMain();});
+seg('tfSeg', [['5m','5분'],['15m','15분'],['1h','1시간'],['4h','4시간']], curTF, v=>{curTF=v; drawMain();});
+seg('cmpSymSeg', SYMS.map(s=>[s,NAME[s]]), cmpSym, v=>{cmpSym=v; renderCmp();});
+$('showWedom').onchange=drawMain;
+let actSym='ALL', actKind='ALL';
+seg('actSymSeg', [['ALL','전체'], ...SYMS.map(s=>[s,NAME[s]])], actSym, v=>{actSym=v; renderActs();});
+seg('actKindSeg', [['ALL','모든 구분'],['ENTRY','진입·추가'],['EXIT','익절·정리']], actKind, v=>{actKind=v; renderActs();});
+['nCat','nSenti','nScore','nQ'].forEach(id=>$(id).oninput=renderNews);
+$('btRun').onclick=runBacktest; $('btCsv').onclick=btCSV; $('btClear').onclick=async()=>{ await idb.clear(); btStatus('저장된 데이터를 지웠어요.'); };
+document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>btPreset(b.dataset.preset));
+$('btLogChk').onchange=e=>{ btLog=e.target.checked; drawBT(); };
+function drawActive(){ if(activeTab==='bt'){ drawBT(); return; } if(!R.BTCUSDT) return; if(activeTab==='sim'){ drawMain(); drawEq(); } else if(activeTab==='cmp') renderCmp(); else if(activeTab==='news') drawNewsChart(); else if(activeTab==='bt') drawBT(); }
+function renderRegime(){
+  if(!BTCD||!BTCD.length){ $('regimeBadge').textContent='BTC 장분위기: 데이터 없음'; return; }
+  const R3=classifyRegime(BTCD, P); const L=R3[R3.length-1]; const col={BULL:'var(--up)',SIDE:'var(--warn)',BEAR:'var(--down)'}[L.reg];
+  const on = +P.trend===3||+P.trend===4 ? (L.reg==='SIDE'?'웨돔 방식 적용 중':'웨돔 방식 중지 (관망)') : '참고 지표';
+  const b=$('regimeBadge'); b.innerHTML=`BTC 장분위기: <b>${REGNAME[L.reg]}</b> · ${on}`; b.style.color=col; b.style.borderColor=col; b.onclick=()=>{ document.querySelector('#nav button[data-tab="sim"]').click(); $('regimePanel').scrollIntoView({behavior:'smooth'}); };
+  $('regimeNow').innerHTML=`<span style="color:${col}">${REGNAME[L.reg]}</span> <span style="font-size:13px" class="mute">${on}</span>`;
+  let since=R3.length-1; while(since>0&&R3[since-1].reg===L.reg) since--;
+  const pend = L.pend? `<br><span class="warn">${REGNAME[L.pend.to]} 전환 신호 ${L.pend.n}/${L.pend.need}일째</span>` : '';
+  $('regimeDetail').innerHTML=`기준일 ${new Date(L.t+KST).toISOString().slice(0,10)} 일봉 · 종가 ${fmt(L.c,0)} · 50일선 대비 ${L.c>=L.e50?'+':''}${fmt((L.c/L.e50-1)*100,1)}% · 20일선 10일 기울기 ${L.slope>=0?'+':''}${fmt(L.slope,2)}% · ADX ${fmt(L.adx,1)} (+DI ${fmt(L.pdi,1)} / -DI ${fmt(L.mdi,1)})<br>${new Date(R3[since].t+KST).toISOString().slice(0,10)}부터 ${R3.length-since}일째 ${REGNAME[L.reg]}${pend}`;
+  $('rgSlopeTxt').textContent=P.regSlope; $('rgAdxTxt').textContent=P.regAdx; $('rgConfTxt').textContent=P.regConf;
+  if(activeTab==='sim'){ const c=mk('regimeChart'); const vis=R3.filter(x=>x.t>=Date.now()-366*86400e3);
+    const hs=c.addHistogramSeries({priceScaleId:'rg',priceLineVisible:false,lastValueVisible:false}); c.priceScale('rg').applyOptions({scaleMargins:{top:0,bottom:0},visible:false});
+    hs.setData(vis.map(x=>({time:T(x.t),value:1,color:x.reg==='BULL'?'rgba(38,166,154,.28)':x.reg==='BEAR'?'rgba(239,83,80,.28)':'rgba(245,166,35,.22)'})));
+    const ln=c.addLineSeries({color:'#e6e8ec',lineWidth:2,priceLineVisible:false}); ln.setData(vis.map(x=>({time:T(x.t),value:x.c})));
+    const e5=c.addLineSeries({color:'rgba(94,139,255,.8)',lineWidth:1,priceLineVisible:false,lastValueVisible:false}); e5.setData(vis.filter(x=>x.e50).map(x=>({time:T(x.t),value:x.e50})));
+    c.timeScale().fitContent(); }
+}
+const MACRO_DEF = [
+  ['VIX','VIX (미국 주식 공포지수)',1,'pct'], ['OVX','OVX (유가 변동성)',1,'pct'], ['MOVE','MOVE (미 국채 변동성)',1,'pct'], ['BRENT','브렌트유',1,'chg20'],
+  ['DXY','달러지수',0,'pct'], ['US10Y','미 10년물 금리',0,'pct'], ['GOLD','금',0,'pct'], ['NASDAQ','나스닥',0,'pct'], ['DVOL','BTC 옵션 변동성 (DVOL)',0,'pct'], ['FNG','공포·탐욕 지수',0,'pct'] ];
+function macroCalc(){ const M=D.macro; if(!M) return null; const rows=[]; const used=[];
+  for(const [k,name,inScore,kind] of MACRO_DEF){ const s=M[k]; if(!s||s.length<80) continue; const n=s.length, v=s[n-1][1], d5=n>5?(v/s[n-6][1]-1)*100:null;
+    const w=s.slice(Math.max(0,n-365)).map(x=>x[1]); const pv = w.filter(x=>x<=v).length/w.length*100;
+    let p=pv; if(kind==='chg20'){ const ch=i=>(s[i][1]/s[i-20][1]-1)*100; const cw=[]; for(let i=Math.max(20,n-365);i<n;i++) cw.push(ch(i)); const cv=cw[cw.length-1]; p=cw.filter(x=>x<=cv).length/cw.length*100; rows.push({k,name,v,d5,p,inScore,extra:'20일 '+(cv>=0?'+':'')+fmt(cv,1)+'%',t:s[n-1][0]}); if(inScore) used.push(p); continue; }
+    rows.push({k,name,v,d5,p,inScore,t:s[n-1][0]}); if(inScore) used.push(p); }
+  const score = used.length? used.reduce((a,b)=>a+b,0)/used.length : null; return {rows, score}; }
+function renderMacro(){ const r=macroCalc(); if(!r||r.score==null){ $('macroBadge').textContent='매크로 리스크: 데이터 없음'; $('macroNow').textContent='데이터 없음'; return; }
+  const s=r.score, lab = s>=75?'위험':s>=60?'경계':s>=40?'보통':'안정', col = s>=75?'var(--down)':s>=60?'var(--warn)':s>=40?'var(--text)':'var(--up)';
+  const b=$('macroBadge'); b.innerHTML=`매크로 리스크 <b>${fmt(s,0)}</b> · ${lab}`; b.style.color=col; b.style.borderColor=col; b.onclick=()=>{ document.querySelector('#nav button[data-tab="sim"]').click(); $('macroPanel').scrollIntoView({behavior:'smooth'}); };
+  $('macroNow').innerHTML=`<span style="color:${col}">${fmt(s,0)}</span> <span style="font-size:14px;color:${col}">${lab}</span>`;
+  $('macroDetail').innerHTML=`0~40 안정 · 40~60 보통 · 60~75 경계 · 75+ 위험 (최근 1년 기준 상대 위치)<br><b>웨돔 관찰 결과 (9/28~10/26, 26일)</b>: 점수 60 이상인 날 웨돔 익절 폭 중앙값 <b>+0.78%</b>, 60 미만인 날 <b>+2.95%</b>. 점수가 높을수록 익절이 짧아지는 경향(순위상관 -0.51)이 있었어요. 기간이 짧고 박스 위치 영향도 섞여 있어 참고용이에요.`;
+  $('macroTable').innerHTML='<tr><th>지표</th><th>현재</th><th>5일 변화</th><th>1년 중 위치</th><th>점수 반영</th><th>기준일</th></tr>'+r.rows.map(x=>{ const pc=x.p, c2 = pc>=80?'down':pc>=60?'warn':pc<=20?'up':''; return `<tr><td>${x.name}</td><td>${fmt(x.v, x.v>=100?1:2)}${x.extra?' <span class="mute">('+x.extra+')</span>':''}</td><td>${x.d5==null?'-':pct(x.d5)}</td><td class="${c2}">${fmt(pc,0)}%</td><td>${x.inScore?'O':'<span class="mute">참고</span>'}</td><td class="mute">${new Date(x.t+KST).toISOString().slice(0,10)}</td></tr>`; }).join(''); }
+async function runAll(){ for(const s of SYMS){ R[s]=simulate(s, features(s)); W[s]=wedomFor(s); } renderCards(); renderSignals(); renderActs(); drawActive(); try{ renderRegime(); }catch(e){ console.error(e); } try{ renderMacro(); }catch(e){ console.error(e); } const liveTxt = ` · 웨돔·뉴스 ${kst(dataAt())}`;
+  $('status').textContent = (SRC==='embedded' ? `저장된 차트 데이터 사용 (거래소 API 접속 불가, 마지막 갱신 ${kst(D.updatedAt)})` : `업데이트 ${kst(Date.now())} KST · ${({bybit:'바이비트',bitget:'비트겟',binance:'바이낸스'})[SRC]} 실시간 · 1분마다 자동 갱신`) + liveTxt; }
+async function boot(){ $('status').textContent='바이낸스 차트·웨돔 최신 매매 불러오는 중...'; const dp=fetchDirect().catch(e=>console.warn('더따리 직접 조회 실패, 파일 데이터 사용', e)); await loadAll(); await dp; await runAll(); }
+window.addEventListener('resize',()=>drawActive());
+(async()=>{
+  renderParams(); renderTimeline();
+  const cats=new Set(); D.news.forEach(n=>(n.cats||[]).forEach(c=>cats.add(c))); $('nCat').innerHTML+= [...cats].map(c=>`<option value="${c}">${CAT[c]||c}</option>`).join('');
+  renderNews(); loadFng();
+  try{ await boot(); }catch(e){ $('status').innerHTML='<span class="down">불러오기 실패: '+e.message+'</span>'; console.error(e); }
+  setInterval(async()=>{ try{ await refreshTail(); await runAll(); }catch(e){ console.error(e); } }, 60000);
+  const syncWedom = async()=>{ try{ let ch=await reloadLive(); try{ ch=(await fetchDirect())||ch; }catch(e){ console.warn(e); } if(ch){ renderNews(); await runAll(); } }catch(e){ console.error(e); } };
+  setInterval(syncWedom, 2*60000);
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') syncWedom(); });
+  window.addEventListener('focus', syncWedom);
+})();
+</script>
+</body>
+</html>
