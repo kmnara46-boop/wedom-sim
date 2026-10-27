@@ -3,55 +3,136 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>웨돔 스타일 모의매매</title>
+<title>웨돔 스타일 모의매매 (v2 시안)</title>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="data.js"></script>
 <script src="live.js" onerror="void 0"></script>
 <style>
-:root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--mute:#8b93a3;--up:#26a69a;--down:#ef5350;--acc:#5e8bff;--warn:#f5a623}
+/* ===== 웨돔 디자인 토큰 (design_guide.md 기준) ===== */
+:root{
+  --bg:#0f1115;--panel:#171a21;--panel-2:#1c2029;--line:#262b36;--line-2:#323846;
+  --text:#e6e8ec;--mute:#8b93a3;--dim:#5f6779;
+  --up:#26a69a;--down:#ef5350;--warn:#f5a623;--acc:#5e8bff;--wedom:#3fd0ff;
+  --bull:var(--up);--side:var(--warn);--bear:var(--down);
+  --up-bg:rgba(38,166,154,.12);--down-bg:rgba(239,83,80,.12);--warn-bg:rgba(245,166,35,.12);
+  --r:10px;--r-s:6px;--gap:12px;--pad:14px;
+  --fs-xs:11px;--fs-s:12px;--fs:14px;--fs-h:15px;--fs-kpi:20px;--fs-big:22px;
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,"Segoe UI","Malgun Gothic",sans-serif}
-header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap}
-header h1{font-size:17px;margin:0}
-nav button{background:none;border:0;color:var(--mute);padding:8px 12px;font-size:14px;cursor:pointer;border-radius:6px}
-nav button.on{color:var(--text);background:var(--panel)}
-.status{margin-left:auto;color:var(--mute);font-size:12px}
-main{padding:16px 20px;max-width:1500px;margin:0 auto}
+html{scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--text);font:var(--fs)/1.5 -apple-system,"Segoe UI","Malgun Gothic",sans-serif}
+a{color:var(--acc)}
+/* --- 헤더: 제목 · 탭 · 상태 --- */
+header{display:flex;align-items:center;gap:14px;padding:8px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(15,17,21,.96);backdrop-filter:blur(6px);z-index:20;min-height:52px}
+header h1{font-size:16px;margin:0;white-space:nowrap;letter-spacing:-.2px}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{background:none;border:0;color:var(--mute);padding:7px 12px;font-size:14px;cursor:pointer;border-radius:var(--r-s);white-space:nowrap}
+nav button:hover{color:var(--text)}
+nav button.on{color:var(--text);background:var(--panel);box-shadow:inset 0 -2px 0 var(--acc)}
+.status{margin-left:auto;color:var(--dim);font-size:var(--fs-xs);text-align:right;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status:hover{white-space:normal}
+/* --- 상단 요약 줄 (KPI) --- */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap);max-width:1500px;margin:12px auto 0;padding:0 20px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px var(--pad);min-width:0}
+.kpi-l{font-size:var(--fs-s);color:var(--mute);font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.kpi-v{font-size:var(--fs-kpi);font-weight:700;line-height:1.35;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-v small{font-size:13px;font-weight:600}
+.kpi-s{font-size:var(--fs-s);color:var(--mute);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+#regimeBadge,#macroBadge{display:inline-block;border:1px solid var(--line-2);border-radius:999px;padding:0 12px;font-size:16px;cursor:pointer;margin-top:4px}
+#regimeBadge b,#macroBadge b{font-weight:700}
+/* --- 본문 --- */
+main{padding:12px 20px 40px;max-width:1500px;margin:0 auto}
 .tab{display:none}.tab.on{display:block}
-.row{display:flex;gap:12px;flex-wrap:wrap}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;flex:1;min-width:220px}
-.card h3{margin:0 0 8px;font-size:13px;color:var(--mute);font-weight:600}
-.big{font-size:22px;font-weight:700}
+.sec-title{display:flex;align-items:baseline;gap:10px;margin:22px 0 8px;font-size:var(--fs-h);font-weight:700}
+.sec-title .note{font-weight:400}
+h2{font-size:var(--fs-h);margin:20px 0 8px}
+h2 .note{font-weight:400}
+.grid{display:grid;gap:var(--gap)}
+.g-5-7{grid-template-columns:5fr 7fr}
+.g-1-1{grid-template-columns:1fr 1fr}
+.g-4-8{grid-template-columns:4fr 8fr}
+.row{display:flex;gap:var(--gap);flex-wrap:wrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:var(--pad);flex:1;min-width:220px}
+.card h3{margin:0 0 6px;font-size:13px;color:var(--mute);font-weight:600}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:var(--pad)}
+.panel-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.panel-h h3{margin:0;font-size:13px;color:var(--mute);font-weight:600}
+.big{font-size:var(--fs-big);font-weight:700;font-variant-numeric:tabular-nums}
 .up{color:var(--up)}.down{color:var(--down)}.mute{color:var(--mute)}.warn{color:var(--warn)}
 .seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.seg button{background:none;border:0;color:var(--mute);padding:6px 12px;cursor:pointer}
+.seg button{background:none;border:0;color:var(--mute);padding:5px 11px;cursor:pointer;font-size:13px}
 .seg button.on{background:var(--acc);color:#fff}
-.toolbar{display:flex;gap:10px;align-items:center;margin:14px 0 8px;flex-wrap:wrap}
-.chart{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;position:relative}
-.legend{position:absolute;left:10px;top:6px;z-index:3;font-size:12px;color:var(--mute);pointer-events:none}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-th{color:var(--mute);font-weight:600;position:sticky;top:0;background:var(--panel)}
-.scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
-.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line);margin-right:4px;color:var(--mute)}
-.pill.L{color:var(--up);border-color:var(--up)}.pill.S{color:var(--down);border-color:var(--down)}
+.toolbar{display:flex;gap:10px;align-items:center;margin:0 0 8px;flex-wrap:wrap}
+.toolbar .spacer{margin-left:auto}
+.chart{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;position:relative}
+.panel .chart{border-color:transparent;background:var(--panel);margin-bottom:4px}
+.chart-stack .chart{border-radius:0;border-left:0;border-right:0;border-top:1px solid var(--line);margin:0}
+.chart-stack .chart:first-child{border-top:0}
+.legend{position:absolute;left:10px;top:6px;z-index:3;font-size:var(--fs-s);color:var(--mute);pointer-events:none}
+.chart[data-empty]:not(:has(canvas))::after{content:attr(data-empty);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:13px}
+/* --- 표: 숫자 오른쪽 정렬 + 고정폭 숫자 --- */
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+th{color:var(--mute);font-weight:600;font-size:var(--fs-s);position:sticky;top:0;background:var(--panel-2);z-index:1}
+td.num,th.num{text-align:right}
+tbody tr:hover td,table tr:hover td{background:rgba(255,255,255,.025)}
+td.mute{color:var(--mute)}
+.scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+.scroll.tall{max-height:none}
+.scroll:has(> table:empty)::before,.scroll[data-empty]:empty::before{content:attr(data-empty);display:block;padding:18px 14px;color:var(--dim);font-size:13px}
+.scroll:has(> table:empty){border-style:dashed}
+.pill{display:inline-block;padding:0 8px;border-radius:999px;font-size:var(--fs-xs);border:1px solid var(--line-2);margin-right:4px;color:var(--mute);line-height:18px}
+.pill.L{color:var(--up);border-color:var(--up);background:var(--up-bg)}.pill.S{color:var(--down);border-color:var(--down);background:var(--down-bg)}
 .cond{display:grid;grid-template-columns:auto auto auto;gap:2px 12px;font-size:12px}
 .ok{color:var(--up);font-weight:700}
 .news-item{padding:10px 12px;border-bottom:1px solid var(--line)}
 .news-item a{color:var(--text);text-decoration:none;font-weight:600}
 .news-item a:hover{text-decoration:underline}
 .news-item .imp{color:var(--mute);font-size:12px;margin-top:4px;white-space:normal}
-input,select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+input,select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:var(--r-s);padding:5px 8px;font:inherit;font-size:13px}
+input:focus,select:focus{outline:1px solid var(--acc);border-color:var(--acc)}
 label{color:var(--mute);font-size:12px}
-.grid-params{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
-.grid-params div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px}
-.grid-params input{width:100%;margin-top:4px}
-.btn{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:7px 14px;cursor:pointer}
-.btn.ghost{background:none;border:1px solid var(--line);color:var(--text)}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:var(--r-s);padding:7px 14px;cursor:pointer;font-size:13px}
+.btn.ghost{background:none;border:1px solid var(--line-2);color:var(--text)}
+.btn.sm{padding:4px 10px;font-size:12px}
 .note{color:var(--mute);font-size:12px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:900px){.two{grid-template-columns:1fr}}
-h2{font-size:15px;margin:18px 0 8px}
+/* --- 접기 (details) --- */
+details.fold{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px}
+details.fold>summary{cursor:pointer;list-style:none;padding:10px var(--pad);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:'▸';color:var(--mute);width:10px;transition:transform .15s}
+details.fold[open]>summary::before{transform:rotate(90deg)}
+details.fold>summary .cnt{margin-left:auto;color:var(--mute);font-size:12px}
+details.fold>.fold-body{padding:0 var(--pad) var(--pad)}
+details.fold.plain{background:none;border:0;margin:6px 0 0}
+details.fold.plain>summary{padding:4px 0;color:var(--mute);font-size:12px}
+details.fold.plain>.fold-body{padding:4px 0 0}
+/* --- 전략 설정 --- */
+.cfg-bar{position:sticky;top:53px;z-index:10;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px var(--pad);margin-bottom:10px;box-shadow:0 6px 12px rgba(0,0,0,.25)}
+.cfg-rules{font-size:13px;line-height:1.7}
+.grid-params{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;padding:0 var(--pad) var(--pad)}
+.grid-params .pf{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.grid-params .pf.changed{border-color:var(--warn)}
+.grid-params .pf label{display:block;min-height:18px}
+.grid-params input{width:100%;margin-top:4px}
+.pdef{display:block;font-size:var(--fs-xs);color:var(--warn);margin-top:3px}
+/* --- 백테스트 폼 --- */
+.form-rows{display:grid;grid-template-columns:88px 1fr;gap:8px 12px;align-items:center}
+.form-rows>.fl{color:var(--mute);font-size:12px;font-weight:600}
+.form-rows>.fv{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap}
+/* --- 모의매매 탭 --- */
+#cards{display:flex;gap:var(--gap)}
+#cards>.card:first-child:nth-last-child(2){display:none} /* 종목 1개일 때 '합계' 카드는 중복이라 숨김 */
+#cards .card{margin:0;height:100%}
+#signals .card{margin:0;background:none;border:0;padding:0;min-width:0}
+#signals .card h3{display:none}
+#signals{display:block}
+.regime-now{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+/* --- 반응형 --- */
+@media(max-width:1100px){.g-5-7,.g-1-1,.g-4-8{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){header{flex-wrap:wrap;padding:8px 12px;gap:6px}.status{order:3;max-width:100%;width:100%;text-align:left}nav{order:2;width:100%}main{padding:10px 12px 32px}.kpis{padding:0 12px;gap:8px}.kpi-v{font-size:17px}.form-rows{grid-template-columns:1fr}.cfg-bar{top:96px}#mainChart{height:340px!important}}
 </style>
 </head>
 <body>
@@ -59,174 +140,213 @@ h2{font-size:15px;margin:18px 0 8px}
   <h1>웨돔 스타일 모의매매</h1>
   <nav id="nav">
     <button data-tab="sim" class="on">모의매매</button>
-    <button data-tab="cmp">웨돔 vs 모의 비교</button>
+    <button data-tab="cmp">웨돔 vs 모의</button>
     <button data-tab="news">뉴스</button>
     <button data-tab="bt">백테스트</button>
     <button data-tab="cfg">전략 설정</button>
   </nav>
-  <div id="macroBadge" class="pill" style="font-size:13px;padding:4px 12px;cursor:pointer">매크로 리스크 -</div>
-  <div id="regimeBadge" class="pill" style="font-size:13px;padding:4px 12px;cursor:pointer" title="클릭하면 기준과 기록을 볼 수 있어요">BTC 장분위기 계산 중...</div>
-  <div class="status" id="status">로딩 중...</div>
+  <div class="status" id="status" title="데이터 출처와 마지막 갱신 시각">로딩 중...</div>
 </header>
+<!-- ============ 상단 요약 줄: 모든 탭 공통 ============ -->
+<section class="kpis" id="kpiBar" aria-label="요약">
+  <div class="kpi"><div class="kpi-l"><span>BTC 장분위기</span><span class="mute" style="font-weight:400">일봉</span></div><div id="regimeBadge" title="클릭하면 기준과 기록을 볼 수 있어요">계산 중...</div><div class="kpi-s" id="kpiRegSub">&nbsp;</div></div>
+  <div class="kpi"><div class="kpi-l"><span>모의 계좌</span><span class="mute" style="font-weight:400" id="kpiAcctStart"></span></div><div class="kpi-v" id="kpiAcct">-</div><div class="kpi-s" id="kpiAcctSub">&nbsp;</div></div>
+  <div class="kpi"><div class="kpi-l"><span>웨돔 현재 포지션</span><span class="mute" style="font-weight:400">실제 계좌</span></div><div class="kpi-v" id="kpiWedom">-</div><div class="kpi-s" id="kpiWedomSub">&nbsp;</div></div>
+  <div class="kpi"><div class="kpi-l"><span>매크로 리스크</span><span class="mute" style="font-weight:400">0~100</span></div><div id="macroBadge" title="클릭하면 지표별 상세를 볼 수 있어요">-</div><div class="kpi-s" id="kpiRiskSub">&nbsp;</div></div>
+</section>
 <main>
 <!-- ============ SIM ============ -->
 <section class="tab on" id="tab-sim">
-  <div class="card" id="regimePanel" style="margin-bottom:12px">
-    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-      <div><h3 style="margin:0">BTC 장분위기 (일봉 기준)</h3><div class="big" id="regimeNow">-</div></div>
-      <div class="note" id="regimeDetail" style="flex:1;min-width:280px"></div>
+  <div class="sec-title">지금 상태 <span class="note">모의 계좌와 진입 신호</span></div>
+  <div class="grid g-4-8">
+    <div id="cards"></div>
+    <div class="panel"><div class="panel-h"><h3>현재 신호 상태</h3><span class="note">초록 굵은 글씨 = 조건 충족</span></div><div id="signals"></div></div>
+  </div>
+
+  <div class="sec-title">차트</div>
+  <div class="panel" style="padding:10px 10px 6px">
+    <div class="toolbar">
+      <div class="seg" id="symSeg"></div>
+      <div class="seg" id="tfSeg"></div>
+      <label><input type="checkbox" id="showWedom" checked> 웨돔 실제 매매 표시</label>
+      <span class="note spacer"><span class="up">▲</span><span class="down">▼</span> 모의 진입/추가 · ● 익절/정리 · <span style="color:var(--wedom)">■</span> 웨돔 실제</span>
     </div>
-    <div class="note" style="margin-top:8px">
+    <div class="chart-stack">
+      <div class="chart" id="mainChart" style="height:460px"><div class="legend" id="mainLegend"></div></div>
+      <div class="chart" id="rsiChart" style="height:110px"><div class="legend">RSI 14 (70/30)</div></div>
+      <div class="chart" id="stChart" style="height:100px"><div class="legend">Stoch RSI (80/20)</div></div>
+    </div>
+  </div>
+
+  <div class="sec-title">모의 매매 내역 <span class="note">최신순</span></div>
+  <div class="toolbar"><div class="seg" id="actSymSeg"></div><div class="seg" id="actKindSeg"></div><span class="note" id="actCount"></span></div>
+  <div class="scroll" data-empty="아직 모의 매매가 없어요."><table id="actTable"></table></div>
+
+  <div class="sec-title">계좌 곡선 · 시장 환경 <span class="note">참고 지표 (클릭 시 상단 요약에서 이동)</span></div>
+  <div class="grid g-1-1">
+    <div class="panel">
+      <div class="panel-h"><h3>계좌 곡선</h3><span class="note">시작 자금 기준</span></div>
+      <div class="chart" id="eqChart" style="height:240px" data-empty="계산 중..."><div class="legend" id="eqLegend"></div></div>
+    </div>
+    <div class="panel" id="regimePanel">
+      <div class="regime-now">
+        <div><h3 style="margin:0;font-size:13px;color:var(--mute)">BTC 장분위기 (일봉 기준)</h3><div class="big" id="regimeNow">-</div></div>
+        <div class="note" id="regimeDetail" style="flex:1;min-width:240px"></div>
+      </div>
+      <div class="chart" id="regimeChart" style="height:150px;margin-top:8px"><div class="legend">최근 1년 BTC 일봉 · 배경 = 장분위기 (초록 강세 / 주황 횡보 / 빨강 약세)</div></div>
+      <details class="fold plain"><summary>판별 기준 보기</summary><div class="fold-body note">
       <b>판별 기준</b> (매일 일봉 마감 기준): <span class="up">강세장</span> = 종가가 50일 이동평균 위 + 20일선이 10일 동안 <span id="rgSlopeTxt">3</span>% 넘게 상승 + ADX(14) <span id="rgAdxTxt">25</span> 이상 + 매수 방향성(+DI)이 우세.
       <span class="down">약세장</span> = 그 반대 (50일선 아래, 20일선 하락, ADX 기준 이상, -DI 우세). 둘 다 아니면 <span class="warn">횡보장</span>.
       잦은 뒤집힘을 막으려고 새 장분위기가 <span id="rgConfTxt">5</span>일 연속 나와야 전환해요. 기준값은 '전략 설정'에서 바꿀 수 있어요.
       <br>지금 기본값은 참고 지표로만 표시해요. 전략 설정에서 추세 필터를 3번으로 바꾸면 <b>횡보장일 때만 웨돔 방식으로 매매</b>하고, 강세장·약세장으로 바뀌면 포지션을 정리하고 쉬어요.
+      </div></details>
     </div>
-    <div class="chart" id="regimeChart" style="height:170px;margin-top:8px"><div class="legend">최근 1년 BTC 일봉 종가 · 배경 막대 = 장분위기 (초록 강세 / 주황 횡보 / 빨강 약세)</div></div>
   </div>
-  <div class="card" id="macroPanel" style="margin-bottom:12px">
-    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-      <div><h3 style="margin:0">매크로·지정학 리스크 점수</h3><div class="big" id="macroNow">-</div></div>
+  <div class="panel" id="macroPanel" style="margin-top:var(--gap)">
+    <div class="regime-now">
+      <div><h3 style="margin:0;font-size:13px;color:var(--mute)">매크로·지정학 리스크 점수</h3><div class="big" id="macroNow">-</div></div>
       <div class="note" id="macroDetail" style="flex:1;min-width:280px"></div>
     </div>
-    <div class="scroll" style="max-height:none;margin-top:8px"><table id="macroTable"></table></div>
-    <div class="note" style="margin-top:6px">점수 = VIX(주식 공포), OVX(유가 변동성), MOVE(채권 변동성), 브렌트유 20일 상승률을 각각 최근 1년 중 몇 % 위치인지(백분위)로 바꿔 평균낸 값. 0~100, 높을수록 불안. 코인 내부 지표(DVOL, 공포·탐욕)는 참고로만 표시하고 점수엔 넣지 않았어요. 데이터는 PC 자동 갱신(30분마다)과 감시 루틴이 받아와요.</div>
+    <div class="scroll tall" style="margin-top:8px" data-empty="매크로 데이터가 없어요."><table id="macroTable"></table></div>
+    <details class="fold plain"><summary>점수 계산 방법</summary><div class="fold-body note">점수 = VIX(주식 공포), OVX(유가 변동성), MOVE(채권 변동성), 브렌트유 20일 상승률을 각각 최근 1년 중 몇 % 위치인지(백분위)로 바꿔 평균낸 값. 0~100, 높을수록 불안. 코인 내부 지표(DVOL, 공포·탐욕)는 참고로만 표시하고 점수엔 넣지 않았어요. 데이터는 PC 자동 갱신(30분마다)과 감시 루틴이 받아와요.</div></details>
   </div>
-  <div class="row" id="cards"></div>
-  <div class="toolbar">
-    <div class="seg" id="symSeg"></div>
-    <div class="seg" id="tfSeg"></div>
-    <label><input type="checkbox" id="showWedom" checked> 웨돔 실제 매매 표시</label>
-    <span class="note">▲▼ 모의 진입/추가, ● 익절/정리, ◆ 웨돔 실제</span>
-  </div>
-  <div class="chart" id="mainChart" style="height:460px"><div class="legend" id="mainLegend"></div></div>
-  <div class="chart" id="rsiChart" style="height:120px"><div class="legend">RSI 14 (70/30)</div></div>
-  <div class="chart" id="stChart" style="height:110px"><div class="legend">Stoch RSI (80/20)</div></div>
-  <div class="two">
-    <div>
-      <h2>현재 신호 상태</h2>
-      <div class="row" id="signals"></div>
-    </div>
-    <div>
-      <h2>계좌 곡선 (종목별 $10,000 시작)</h2>
-      <div class="chart" id="eqChart" style="height:260px"><div class="legend" id="eqLegend"></div></div>
-    </div>
-  </div>
-  <h2>모의 매매 내역 (최신순)</h2>
-  <div class="toolbar"><div class="seg" id="actSymSeg"></div><div class="seg" id="actKindSeg"></div><span class="note" id="actCount"></span></div>
-  <div class="scroll"><table id="actTable"></table></div>
 </section>
 
 <!-- ============ COMPARE ============ -->
 <section class="tab" id="tab-cmp">
-  <div class="toolbar"><div class="seg" id="cmpSymSeg"></div><span class="note" id="cmpNote"></span></div>
+  <div class="toolbar" style="margin-top:12px"><div class="seg" id="cmpSymSeg"></div><span class="note" id="cmpNote"></span></div>
   <div class="row" id="cmpCards"></div>
-  <div class="chart" id="cmpChart" style="height:420px"><div class="legend">1시간봉 · ◆ 웨돔 실제 / ▲▼ 모의</div></div>
-  <div class="chart" id="dirChart" style="height:140px"><div class="legend">포지션 방향 (+1 롱 / -1 숏) · 파랑 웨돔, 주황 모의</div></div>
-  <div class="two">
-    <div><h2>웨돔 실제 트레이드</h2><div class="scroll"><table id="wTrades"></table></div></div>
-    <div><h2>모의 트레이드</h2><div class="scroll"><table id="sTrades"></table></div></div>
+  <div class="sec-title">가격과 매매 시점 <span class="note">1시간봉</span></div>
+  <div class="panel" style="padding:6px">
+    <div class="chart-stack">
+      <div class="chart" id="cmpChart" style="height:420px"><div class="legend">1시간봉 · ■ 웨돔 실제 / ▲▼ 모의</div></div>
+      <div class="chart" id="dirChart" style="height:130px"><div class="legend">포지션 방향 (+1 롱 / -1 숏) · 파랑 웨돔, 주황 모의</div></div>
+    </div>
   </div>
-  <h2>웨돔 진입·추가 시점별 모의 반응 (±3시간 내 같은 방향 진입 여부)</h2>
-  <div class="scroll"><table id="matchTable"></table></div>
+  <div class="grid g-1-1">
+    <div><div class="sec-title">웨돔 실제 트레이드</div><div class="scroll" data-empty="웨돔 트레이드 기록이 없어요."><table id="wTrades"></table></div></div>
+    <div><div class="sec-title">모의 트레이드</div><div class="scroll" data-empty="모의 트레이드가 없어요."><table id="sTrades"></table></div></div>
+  </div>
+  <div class="sec-title">웨돔 진입·추가 시점별 모의 반응 <span class="note">±3시간 안에 같은 방향 진입 여부</span></div>
+  <div class="scroll" data-empty="비교할 웨돔 진입 기록이 없어요."><table id="matchTable"></table></div>
 </section>
 
 <!-- ============ NEWS ============ -->
 <section class="tab" id="tab-news">
-  <div class="row">
-    <div class="card" style="max-width:260px"><h3>공포·탐욕 지수 (실시간)</h3><div class="big" id="fng">-</div><div class="note" id="fngNote"></div></div>
-    <div class="card"><h3>뉴스 데이터</h3><div id="newsMeta" class="note"></div><div class="note">출처: 더따리 뉴스피드(AI 영향 분석 포함). 페이지를 열거나 새로고침하면 더따리에서 바로 조회하고(PC 작업도 5분마다 갱신), 실시간은 <a href="https://theddari.com/trends/news" target="_blank" style="color:var(--acc)">더따리 뉴스피드</a>에서 볼 수 있어요.</div></div>
+  <div class="grid g-4-8" style="margin-top:12px">
+    <div class="card" style="margin:0"><h3>공포·탐욕 지수 (실시간)</h3><div class="big" id="fng">-</div><div class="note" id="fngNote"></div></div>
+    <div class="card" style="margin:0"><h3>뉴스 데이터</h3><div id="newsMeta" class="note"></div><div class="note">출처: 더따리 뉴스피드(AI 영향 분석 포함). 페이지를 열거나 새로고침하면 더따리에서 바로 조회하고(PC 작업도 5분마다 갱신), 실시간은 <a href="https://theddari.com/trends/news" target="_blank" style="color:var(--acc)">더따리 뉴스피드</a>에서 볼 수 있어요.</div></div>
   </div>
-  <h2>BTC 가격과 주요 이벤트</h2>
+  <div class="sec-title">BTC 가격과 주요 이벤트</div>
   <div class="chart" id="newsChart" style="height:320px"><div class="legend">1시간봉 · 위 화살표 호재 / 아래 화살표 악재 (주요 이벤트 + 속보 점수 70 이상)</div></div>
-  <div class="two">
+  <div class="grid g-1-1">
     <div>
-      <h2>실시간 수집 뉴스 (BTC 영향 가능)</h2>
+      <div class="sec-title">실시간 수집 뉴스 <span class="note">BTC 영향 가능</span></div>
       <div class="toolbar">
         <select id="nCat"><option value="">전체 분야</option></select>
         <select id="nSenti"><option value="">호재/악재 전체</option><option value="LONG">호재</option><option value="SHORT">악재</option><option value="NEUTRAL">중립</option></select>
         <label>최소 점수 <input type="number" id="nScore" value="50" min="0" max="100" style="width:60px"></label>
         <input id="nQ" placeholder="검색" style="width:140px">
       </div>
-      <div class="scroll" style="max-height:700px" id="newsList"></div>
+      <div class="scroll" style="max-height:700px" id="newsList" data-empty="조건에 맞는 뉴스가 없어요."></div>
     </div>
     <div>
-      <h2>9월 말~10월 주요 이벤트 타임라인</h2>
-      <div class="scroll" style="max-height:760px" id="timeline"></div>
+      <div class="sec-title">9월 말~10월 주요 이벤트 타임라인</div>
+      <div class="scroll" style="max-height:748px" id="timeline" data-empty="타임라인이 비어 있어요."></div>
     </div>
   </div>
 </section>
 
 <!-- ============ BACKTEST ============ -->
 <section class="tab" id="tab-bt">
-  <div class="card" style="margin-top:6px">
-    <div class="toolbar" style="margin:0 0 8px">
-      <b>종목</b>
-      <label><input type="checkbox" class="btSym" value="BTCUSDT" checked> 비트코인</label>
-      <label><input type="checkbox" class="btSym" value="ETHUSDT"> 이더리움</label>
-      <label><input type="checkbox" class="btSym" value="XRPUSDT"> 리플</label>
-      <b style="margin-left:14px">전략</b>
-      <label><input type="checkbox" class="btMode" value="1" checked> v1 단타 역추세</label>
-      <label><input type="checkbox" class="btMode" value="2" checked> v2 스윙 코어</label>
+  <div class="panel" style="margin-top:12px">
+    <div class="form-rows">
+      <div class="fl">대상</div>
+      <div class="fv">
+        <label><input type="checkbox" class="btSym" value="BTCUSDT" checked> 비트코인</label>
+        <span class="mute">|</span>
+        <label><input type="checkbox" class="btMode" value="1" checked> v1 단타 역추세</label>
+        <label><input type="checkbox" class="btMode" value="2" checked> v2 스윙 코어</label>
+      </div>
+      <div class="fl">기간</div>
+      <div class="fv">
+        <label>시작 <input type="date" id="btStart" value="2018-01-01"></label>
+        <label>종료 <input type="date" id="btEnd" value="2023-12-31"></label>
+        <button class="btn ghost sm" data-preset="max">가능한 최대</button>
+        <button class="btn ghost sm" data-preset="a">2011~2023</button>
+        <button class="btn ghost sm" data-preset="b">2018~2023</button>
+        <button class="btn ghost sm" data-preset="c">2020~현재</button>
+        <button class="btn ghost sm" data-preset="y1">최근 1년</button>
+        <button class="btn ghost sm" data-preset="m3">최근 3개월</button>
+      </div>
+      <div class="fl">옵션</div>
+      <div class="fv">
+        <label>봉 <select id="btTf"><option value="900000">15분봉 (장기 권장)</option><option value="300000">5분봉 (정밀, 4년 이하)</option></select></label>
+        <label>사이즈 <select id="btComp"><option value="1">복리 (현재 자금 기준, 권장)</option><option value="0">고정 (항상 시작 자금 기준)</option></select></label>
+      </div>
+      <div class="fl">횡보장 모드</div>
+      <div class="fv">
+        <label><input type="checkbox" id="btSeg"> <b>횡보장 구간만</b> (구간마다 시작 자금으로 새로 시작)</label>
+        <label>최소 기간 <input id="btSegMin" type="number" value="14" style="width:60px">일</label>
+        <label>30일 고저폭 상한 <input id="btSegBox" type="number" value="0" style="width:60px">% (0=제한 없음)</label>
+        <label><input type="checkbox" id="btSegDef"> 구간 안 박스 이탈 방어 (필터 1번)</label>
+      </div>
+      <div class="fl"></div>
+      <div class="fv">
+        <button class="btn" id="btRun">백테스트 실행</button>
+        <button class="btn ghost" id="btCsv">거래내역 CSV</button>
+        <button class="btn ghost" id="btClear">저장 데이터 지우기</button>
+        <span class="note" id="btStatus">종목·전략·기간을 고르고 실행하세요. 파라미터는 '전략 설정' 탭 값을 그대로 써요.</span>
+      </div>
     </div>
-    <div class="toolbar" style="margin:0 0 8px">
-      <label>시작 <input type="date" id="btStart" value="2018-01-01"></label>
-      <label>종료 <input type="date" id="btEnd" value="2023-12-31"></label>
-      <span class="note">빠른 선택</span>
-      <button class="btn ghost" data-preset="max">가능한 최대 (~현재)</button>
-      <button class="btn ghost" data-preset="a">2011~2023</button>
-      <button class="btn ghost" data-preset="b">2018~2023</button>
-      <button class="btn ghost" data-preset="c">2020~현재</button>
-      <button class="btn ghost" data-preset="y1">최근 1년</button>
-      <button class="btn ghost" data-preset="m3">최근 3개월</button>
-    </div>
-    <div class="toolbar" style="margin:0">
-      <label>봉 <select id="btTf"><option value="900000">15분봉 (장기 권장)</option><option value="300000">5분봉 (정밀, 4년 이하)</option></select></label>
-      <label>사이즈 <select id="btComp"><option value="1">복리 (현재 자금 기준, 권장)</option><option value="0">고정 (항상 시작 자금 기준)</option></select></label>
-      <button class="btn" id="btRun">백테스트 실행</button>
-      <button class="btn ghost" id="btCsv">거래내역 CSV</button>
-      <button class="btn ghost" id="btClear">저장 데이터 지우기</button>
-    </div>
-    <div class="toolbar" style="margin:8px 0 0">
-      <label><input type="checkbox" id="btSeg"> <b>횡보장 구간만</b> (BTC 장분위기 기준, 구간마다 시작 자금으로 새로 시작)</label>
-      <label>최소 기간 <input id="btSegMin" type="number" value="14" style="width:60px">일</label>
-      <label>30일 고저폭 상한 <input id="btSegBox" type="number" value="0" style="width:60px">% (0=제한 없음)</label>
-      <label><input type="checkbox" id="btSegDef"> 구간 안에서 박스 이탈 방어 (필터 1번)</label>
-    </div>
-    <div class="note" id="btStatus" style="margin-top:10px">종목·전략·기간을 고르고 실행하세요. 파라미터는 '전략 설정' 탭 값을 그대로 써요.</div>
-    <div class="note" style="margin-top:6px">데이터 범위: BTC 2011-09~ (비트스탬프 → 2017-08~ 바이낸스 현물 → 2019-09~ 바이낸스 선물), ETH 2016-05~ (코인베이스 → 바이낸스), XRP 2016-12~ (비트스탬프 → 바이낸스). 시작일에 맞춰 쓸 수 있는 가장 좋은 출처 하나를 자동으로 고릅니다. 2010년 데이터는 거래소 API에 없어서 BTC는 2011-09부터 가능해요. 한 번 받은 월별 데이터는 브라우저에 저장돼서 다음 실행부터 빨라요.</div>
+    <details class="fold plain"><summary>데이터 범위와 출처</summary><div class="fold-body note">데이터 범위: BTC 2011-09~ (비트스탬프 → 2017-08~ 바이낸스 현물 → 2019-09~ 바이낸스 선물), ETH 2016-05~ (코인베이스 → 바이낸스), XRP 2016-12~ (비트스탬프 → 바이낸스). 시작일에 맞춰 쓸 수 있는 가장 좋은 출처 하나를 자동으로 고릅니다. 2010년 데이터는 거래소 API에 없어서 BTC는 2011-09부터 가능해요. 한 번 받은 월별 데이터는 브라우저에 저장돼서 다음 실행부터 빨라요.</div></details>
   </div>
   <div id="btSegWrap" style="display:none">
-    <h2>횡보장 구간별 결과 요약</h2>
+    <div class="sec-title">횡보장 구간별 결과 요약</div>
     <div class="note" id="btSegNote"></div>
-    <div class="scroll" style="max-height:none"><table id="btSegSum"></table></div>
-    <div class="toolbar"><div class="seg" id="btSegSym"></div><span class="note">막판 20% = 구간 마지막 20% 기간 동안의 손익 (박스가 깨질 때 손실이 여기 몰려요)</span></div>
+    <div class="scroll tall"><table id="btSegSum"></table></div>
+    <div class="toolbar" style="margin-top:10px"><div class="seg" id="btSegSym"></div><span class="note">막판 20% = 구간 마지막 20% 기간 동안의 손익 (박스가 깨질 때 손실이 여기 몰려요)</span></div>
     <div class="scroll" style="max-height:520px"><table id="btSegTable"></table></div>
   </div>
-  <h2>결과 요약 (전체 기간 연속 매매)</h2>
-  <div class="scroll" style="max-height:none"><table id="btSummary"></table></div>
-  <h2>연도별 수익률</h2>
-  <div class="scroll"><table id="btYearly"></table></div>
-  <div class="toolbar"><div class="seg" id="btSymSeg"></div><label><input type="checkbox" id="btLogChk" checked> 로그 스케일</label></div>
-  <div class="chart" id="btChart" style="height:380px"><div class="legend" id="btLegend"></div></div>
-  <h2>트레이드 내역</h2>
+  <div class="sec-title">결과 요약 <span class="note">전체 기간 연속 매매</span></div>
+  <div class="scroll tall" data-empty="아직 결과가 없어요. 위에서 '백테스트 실행'을 누르세요."><table id="btSummary"></table></div>
+  <div class="grid g-4-8">
+    <div><div class="sec-title">연도별 수익률</div><div class="scroll" style="max-height:440px" data-empty="실행 후 표시돼요."><table id="btYearly"></table></div></div>
+    <div><div class="sec-title">계좌 곡선 <span class="toolbar" style="margin:0 0 0 auto;font-weight:400"><span class="seg" id="btSymSeg"></span><label><input type="checkbox" id="btLogChk" checked> 로그 스케일</label></span></div>
+      <div class="chart" id="btChart" style="height:400px" data-empty="실행 후 계좌 곡선이 여기에 그려져요."><div class="legend" id="btLegend"></div></div></div>
+  </div>
+  <div class="sec-title">트레이드 내역</div>
   <div class="toolbar"><div class="seg" id="btTrSeg"></div><span class="note" id="btTrCount"></span></div>
-  <div class="scroll"><table id="btTrades"></table></div>
+  <div class="scroll" data-empty="실행 후 표시돼요."><table id="btTrades"></table></div>
 </section>
 
 <!-- ============ CONFIG ============ -->
 <section class="tab" id="tab-cfg">
-  <h2>전략 규칙 (웨돔 매매 데이터에서 뽑은 패턴)</h2>
-  <div class="card note" style="font-size:13px;color:var(--text)">
-    <b>현재 기본값 = 추세 필터 1번 + 리스크 적응형 익절</b>: 박스가 깨지는 쪽으로의 역방향 매매는 막고(1번), 매크로 리스크 점수가 60 이상이면 분할 익절을 +0.5/+0.8/+1.2%로 짧게 가져가요(웨돔이 불안한 날 짧게 먹는 패턴). 2018~현재 백테스트에서 BTC·ETH v2 기준 가장 나은 조합이었어요.<br>
+  <div class="cfg-bar" style="margin-top:12px">
+    <button class="btn" id="applyP">적용하고 다시 계산</button>
+    <button class="btn ghost" id="resetP">기본값</button>
+    <button class="btn ghost sm" id="pOpenAll">모두 펼치기</button>
+    <button class="btn ghost sm" id="pCloseAll">모두 접기</button>
+    <span class="note" id="cfgDiff"></span>
+    <span class="note" id="cfgNote" style="margin-left:auto"></span>
+  </div>
+  <div class="panel" style="margin-bottom:10px">
+    <div class="panel-h"><h3>현재 기본값 (2026-10-28 팀 결정)</h3></div>
+    <div style="font-size:14px">v2 스윙 코어 + 추세 필터 1번(30일, 0.75) + 박스 이탈 규칙 L (±2%, 15분봉 8개 연속) + 리스크 적응형 익절 (리스크 60 이상이면 익절 +0.5/+0.8/+1.2%). 대상은 비트코인만이고, 장분위기는 상단 요약에서 참고만 해요. <span class="note">주황 테두리 칸 = 기본값과 다른 값</span></div>
+  </div>
+  <details class="fold"><summary><b>전략 규칙 설명</b> <span class="note">웨돔 매매 데이터에서 뽑은 패턴 · 필터 · 기본값 근거</span><span class="cnt">3개 항목</span></summary><div class="fold-body cfg-rules">
+    <details class="fold"><summary><b>필터와 기본값 이력</b></summary><div class="fold-body"><b>현재 기본값은 세 가지를 같이 써요.</b><br>
+    · <b>추세 필터 1번</b>: 30일 범위 상단 25% 안이면 숏, 하단 25% 안이면 롱을 막아요. 박스가 깨지는 쪽으로의 역방향 매매를 막는 장치예요.<br>
+    · <b>박스 이탈 규칙 L</b>: 30일 박스를 2% 넘게 벗어나 15분봉 종가 8개 연속 유지되면 이탈로 확정하고, 이탈 반대 방향 포지션만 손절한 뒤 그 방향 신규 진입을 막아요 (박스 안으로 돌아오거나 30일 지나면 해제).<br>
+    · <b>리스크 적응형 익절</b>: 매크로 리스크 점수가 60 이상이면 분할 익절을 +0.5/+0.8/+1.2%로 짧게 가져가요 (웨돔이 불안한 날 짧게 먹는 패턴).<br>
     <b>추세 필터 3번 = BTC 장분위기</b>: BTC 일봉으로 강세장/횡보장/약세장을 판별해서 횡보장일 때만 웨돔 방식으로 매매하고, 강세장·약세장이면 포지션을 정리하고 쉬어요. 기준은 모의매매 탭 상단 '장분위기' 카드에 있어요. 4번은 장분위기 + 1번 신고가권 필터를 같이 써요.<br>
     <b>추세 필터 1번 (예전 기본값: 30일, 0.75)</b>: 가격이 최근 30일 고저 범위의 상단 25% 안으로 올라오면 '상승 추세'로 보고 숏 진입·추가를 막고 들고 있던 숏은 정리해요(하단 25%면 반대로 롱 금지). 다시 범위 중간 아래로 내려오면 해제돼요. 박스 안에서는 웨돔 방식 그대로 매매하고, 박스를 뚫고 나가는 추세장에서만 역방향을 막는 안전장치예요.<br>
     · 2번(이동평균)은 1시간봉 N일 이평 위/아래로 방향을 제한해요. 장기 결과는 v1에 더 잘 맞지만 지금 같은 박스장 수익을 거의 없애요.<br>
-    · 필터 없이(0) 2018~현재를 돌리면 두 전략 모두 계좌가 0이 됐어요.<br><br>
-    <b>v2 스윙 코어 (기본값)</b>: 방향은 5일 박스로 정하고, 24시간 신호는 물량 조절에만 씁니다.<br>
+    · 필터 없이(0) 2018~현재를 돌리면 두 전략 모두 계좌가 0이 됐어요.</div></details>
+    <details class="fold"><summary><b>v2 스윙 코어</b> <span class="note">기본 전략</span></summary><div class="fold-body"><b>v2 스윙 코어 (기본값)</b>: 방향은 5일 박스로 정하고, 24시간 신호는 물량 조절에만 씁니다.<br>
     · 5일(1시간봉 120개) 고저 범위에서 상단 75% 이상이면 코어 방향 숏, 하단 10% 이하까지 빠져야 롱으로 전환 (그 사이에서는 기존 방향 유지). 웨돔은 전체 시간의 66%를 숏으로 보냈고, 이 규칙 하나로 웨돔 방향의 약 85%가 설명됩니다.<br>
-    · 코어 방향으로만 진입·추가하고, 반대쪽 24시간 극단 신호가 오면 뒤집지 않고 일부만 익절(코어 30%는 유지). 방향은 5일 박스 기준이 바뀔 때만 뒤집습니다.<br><br>
-    <b>v1 단타 역추세</b>: 박스권 역추세 + 분할 물타기 + 분할 익절 + 24시간 극단 스위칭 (전략 버전을 1로 바꾸면 사용)<br>
+    · 코어 방향으로만 진입·추가하고, 반대쪽 24시간 극단 신호가 오면 뒤집지 않고 일부만 익절(코어 30%는 유지). 방향은 5일 박스 기준이 바뀔 때만 뒤집습니다.</div></details>
+    <details class="fold"><summary><b>v1 단타 역추세 · 공통 규칙 1)~7)</b></summary><div class="fold-body"><b>v1 단타 역추세</b>: 박스권 역추세 + 분할 물타기 + 분할 익절 + 24시간 극단 스위칭 (전략 버전을 1로 바꾸면 사용)<br>
     아래 1)~7)은 두 버전 공통 (v2에서는 5)를 코어 유지 부분 익절로 대체)<br>
     1) <b>숏 신호</b>: 15분봉 RSI ≥ 기준, 1시간봉 볼린저 %B ≥ 기준, 24시간 범위 상단 위치 ≥ 기준, 당일 VWAP 위 (웨돔 숏 추가 시 중앙값: RSI 65, %B 0.96, 상단 86%, VWAP 위 85%)<br>
     2) <b>롱 신호</b>: 15분봉 RSI ≤ 기준, %B ≤ 기준, 24시간 범위 하단, VWAP 아래 (웨돔 롱 추가 중앙값: RSI 41, %B 0.23, 하단 23%)<br>
@@ -236,19 +356,17 @@ h2{font-size:15px;margin:18px 0 8px}
     6) <b>물량 조절</b>: 많이 물린 뒤 평단 근처로 돌아오면 일부 정리 (웨돔 손실 정리는 전부 -0.84% 이내)<br>
     7) <b>안전 손절</b>: 웨돔은 거의 안 했지만 모의에서는 평단 대비 일정 % 역행 시 전량 손절 (계좌 보호용)<br>
     기본값은 9/28~10/23 BTC에서 웨돔 실제 포지션과 방향 일치율·진입 포착률이 가장 높았던 조합(1,152개 조합 탐색)이에요. 같은 기간에 맞춘 값이라 앞으로의 성과는 다를 수 있어요.<br>
-    수수료는 체결 금액 기준으로 차감. 사이즈는 시작 자금 고정(복리 X), 전체 분할을 다 채우면 실배율 = 최대 노출 배수.
-  </div>
-  <h2>파라미터</h2>
-  <div class="grid-params" id="params"></div>
-  <div class="toolbar"><button class="btn" id="applyP">적용하고 다시 계산</button><button class="btn ghost" id="resetP">기본값</button><span class="note" id="cfgNote"></span></div>
+    수수료는 체결 금액 기준으로 차감. 사이즈는 시작 자금 고정(복리 X), 전체 분할을 다 채우면 실배율 = 최대 노출 배수.</div></details>
+  </div></details>
+  <div class="sec-title">파라미터 <span class="note">그룹을 눌러 펼치거나 접을 수 있어요</span></div>
+  <div id="params"></div>
 </section>
 </main>
-
 <script>
-const SYMS = ['BTCUSDT','ETHUSDT','XRPUSDT'];
+const SYMS = ['BTCUSDT']; // 2026-10-28: 비트코인 전용 (ETH·XRP 제외)
 const NAME = {BTCUSDT:'비트코인',ETHUSDT:'이더리움',XRPUSDT:'리플'};
-const DEF = {start:'2026-09-28T21:00', capital:10000, mode:2, boxN:5, biasHi:0.75, biasLo:0.1, capDrop:0, core:0.3, oppTpMin:0.3, adapt:1, riskHi:60, tpTight:'0.5,0.8,1.2', trend:1, regAdx:25, regSlope:3, regConf:5, trendN:30, trendBand:2, trendPct:0.75, trendExit:1, rsiS:66, pbS:0.95, posS:0.8, rsiL:38, pbL:0.3, posL:0.2, useVwap:1, maxTr:5, trW:'1,1,2,2,4', lev:3, addGap:0.3, cool:30, tp:'1.5,3,4.5', tpFrac:0.3, flipMax:0.5, cutTr:4, stop:4, fee:0.04, session:0};
-const PDESC = {start:['시작 시각 (KST)','datetime-local'], capital:['종목별 시작 자금 ($)'], mode:['전략 버전 (2=스윙 코어, 1=단타 역추세)'], boxN:['[v2] 박스 기간 (일)'], biasHi:['[v2] 숏 전환: N일 범위 위치 ≥'], biasLo:['[v2] 롱 전환: N일 범위 위치 ≤'], capDrop:['[v2] 롱 전환 최소 하락폭 (N일 고점 대비 %, 0=사용 안 함)'], adapt:['리스크 적응형 익절 (1=켬): 매크로 리스크가 기준 이상이면 짧은 익절 사용'], riskHi:['리스크 기준 점수 (이상이면 짧은 익절)'], tpTight:['리스크 높을 때 분할 익절 지점 (% 쉼표)','text'], trend:['추세 필터 (0=끔, 1=N일 신고가/신저가권, 2=N일 이동평균, 3=BTC 장분위기: 횡보장에서만 매매)'], regAdx:['[필터3] 추세 판단 ADX 기준 (이상이면 추세)'], regSlope:['[필터3] 20일선 10일 기울기 기준 (±%)'], regConf:['[필터3] 장분위기 전환 확인 일수'], trendN:['추세 필터 기간 N (일)'], trendBand:['[필터2] 이평 완충 구간 (±%, 이 안이면 박스로 보고 양방향 허용)'], trendPct:['[필터1] 범위 위치 기준 (0.85=상단 15% 안이면 상승추세)'], trendExit:['추세 반대 포지션 청산 (1/0)'], core:['[v2] 코어 유지 비중 (최대 물량 대비)'], oppTpMin:['[v2] 반대 극단 익절 최소 수익 (%)'], rsiS:['숏: 15분 RSI ≥'], pbS:['숏: 1시간 %B ≥'], posS:['숏: 24h 범위 위치 ≥ (0~1)'], rsiL:['롱: 15분 RSI ≤'], pbL:['롱: 1시간 %B ≤'], posL:['롱: 24h 범위 위치 ≤'], useVwap:['VWAP 조건 사용 (1/0)'], maxTr:['최대 분할 횟수'], trW:['분할 비중 (쉼표)','text'], lev:['최대 노출 배수 (실배율)'], addGap:['추가 진입 간격 (% 역행)'], cool:['추가 진입 최소 간격 (분)'], tp:['분할 익절 지점 (% 쉼표)','text'], tpFrac:['익절 1회당 비중 (최대 물량 대비)'], flipMax:['스위칭 허용 손실 (%)'], cutTr:['물량조절 시작 분할 수'], stop:['안전 손절 (% 역행)'], fee:['수수료 (% 편도)'], session:['방송시간(21~03시)만 진입 (1/0)']};
+const DEF = {start:'2026-09-28T21:00', capital:10000, mode:2, boxN:5, biasHi:0.75, biasLo:0.1, capDrop:0, core:0.3, oppTpMin:0.3, adapt:1, riskHi:60, tpTight:'0.5,0.8,1.2', trend:1, bxX:2, bxN:8, bxSide:1, bxFol:0, bxDays:30, bxLag:24, bxMaxD:30, bxTrail:0, regAdx:25, regSlope:3, regConf:5, trendN:30, trendBand:2, trendPct:0.75, trendExit:1, rsiS:66, pbS:0.95, posS:0.8, rsiL:38, pbL:0.3, posL:0.2, useVwap:1, maxTr:5, trW:'1,1,2,2,4', lev:3, addGap:0.3, cool:30, tp:'1.5,3,4.5', tpFrac:0.3, flipMax:0.5, cutTr:4, stop:4, fee:0.04, session:0};
+const PDESC = {start:['시작 시각 (KST)','datetime-local'], capital:['종목별 시작 자금 ($)'], mode:['전략 버전 (2=스윙 코어, 1=단타 역추세)'], boxN:['[v2] 박스 기간 (일)'], biasHi:['[v2] 숏 전환: N일 범위 위치 ≥'], biasLo:['[v2] 롱 전환: N일 범위 위치 ≤'], capDrop:['[v2] 롱 전환 최소 하락폭 (N일 고점 대비 %, 0=사용 안 함)'], adapt:['리스크 적응형 익절 (1=켬): 매크로 리스크가 기준 이상이면 짧은 익절 사용'], riskHi:['리스크 기준 점수 (이상이면 짧은 익절)'], tpTight:['리스크 높을 때 분할 익절 지점 (% 쉼표)','text'], bxX:['박스 이탈 기준 (30일 박스에서 ±%, 0=끔)'], bxN:['박스 이탈 확정: 15분봉 종가 연속 개수'], bxSide:['이탈 반대 방향만 손절·진입 금지 (1) / 전량 손절·관망 (0)'], bxFol:['이탈 방향 추종 진입 비중 (0=안 함, 1=1차 비중)'], bxDays:['이탈 판단용 박스 기간 (일)'], bxLag:['박스 계산에서 뺄 최근 시간 (시간)'], bxMaxD:['이탈 상태 최대 유지 (일)'], bxTrail:['추종 포지션 트레일링 청산 (%, 0=안 씀)'], trend:['추세 필터 (0=끔, 1=N일 신고가/신저가권, 2=N일 이동평균, 3=BTC 장분위기: 횡보장에서만 매매)'], regAdx:['[필터3] 추세 판단 ADX 기준 (이상이면 추세)'], regSlope:['[필터3] 20일선 10일 기울기 기준 (±%)'], regConf:['[필터3] 장분위기 전환 확인 일수'], trendN:['추세 필터 기간 N (일)'], trendBand:['[필터2] 이평 완충 구간 (±%, 이 안이면 박스로 보고 양방향 허용)'], trendPct:['[필터1] 범위 위치 기준 (0.85=상단 15% 안이면 상승추세)'], trendExit:['추세 반대 포지션 청산 (1/0)'], core:['[v2] 코어 유지 비중 (최대 물량 대비)'], oppTpMin:['[v2] 반대 극단 익절 최소 수익 (%)'], rsiS:['숏: 15분 RSI ≥'], pbS:['숏: 1시간 %B ≥'], posS:['숏: 24h 범위 위치 ≥ (0~1)'], rsiL:['롱: 15분 RSI ≤'], pbL:['롱: 1시간 %B ≤'], posL:['롱: 24h 범위 위치 ≤'], useVwap:['VWAP 조건 사용 (1/0)'], maxTr:['최대 분할 횟수'], trW:['분할 비중 (쉼표)','text'], lev:['최대 노출 배수 (실배율)'], addGap:['추가 진입 간격 (% 역행)'], cool:['추가 진입 최소 간격 (분)'], tp:['분할 익절 지점 (% 쉼표)','text'], tpFrac:['익절 1회당 비중 (최대 물량 대비)'], flipMax:['스위칭 허용 손실 (%)'], cutTr:['물량조절 시작 분할 수'], stop:['안전 손절 (% 역행)'], fee:['수수료 (% 편도)'], session:['방송시간(21~03시)만 진입 (1/0)']};
 let P = Object.assign({}, DEF, JSON.parse(localStorage.getItem('wedomP')||'{}'));
 const D = window.WEDOM_DATA || {events:[],news:[],timeline:[]};
 function mergeEv(arr){ const k=e=>`${e.at}|${e.type}|${e.p?e.p.sym:''}|${e.p?e.p.side:''}`; const m=new Map((D.events||[]).map(e=>[k(e),e])); arr.forEach(e=>m.set(k(e),e)); D.events=[...m.values()].sort((a,b)=>a.at-b.at); }
@@ -462,6 +580,11 @@ function runStrategy(mode, c, F, PP){
   const sumW=trW.reduce((a,b)=>a+b,0);
   let cash=+PP.capital, pos=null, acts=[], trades=[], eq=[], daily=[], peak=+PP.capital, mdd=0, dead=false, bias=0, lastBx=null, lastDay=-1, feesTot=0, firstC=null, lastC=null, lastT=null;
   const fee = n => n*PP.fee/100;
+  const BXON = +PP.bxX>0; let BH=null, BL=null, bs=null, bcnt=0, bdir=0, nBrk=0;
+  if(BXON){ const h1=c.h1, W=(+PP.bxDays||30)*24, lag=+(PP.bxLag??24); const hiA=[],loA=[],dqH=[],dqL=[];
+    for(let k=0;k<h1.length;k++){ while(dqH.length&&h1[dqH[dqH.length-1]].h<=h1[k].h) dqH.pop(); dqH.push(k); while(dqH[0]<=k-W) dqH.shift(); while(dqL.length&&h1[dqL[dqL.length-1]].l>=h1[k].l) dqL.pop(); dqL.push(k); while(dqL[0]<=k-W) dqL.shift(); hiA.push(h1[dqH[0]].h); loA.push(h1[dqL[0]].l); }
+    BH=new Array(base.length).fill(null); BL=new Array(base.length).fill(null); let j=-1;
+    for(let k=0;k<base.length;k++){ const tc=base[k].t+ms; while(j+1<h1.length&&h1[j+1].t+H1<=tc) j++; const q=j-lag; if(q<W) continue; BH[k]=hiA[q]; BL[k]=loA[q]; } }
   const sessOk = t => { const h=new Date(t+KST).getUTCHours(); return !+PP.session || h>=21 || h<3; };
   const unitFor = () => (c.compound? Math.max(cash,0) : +PP.capital)*PP.lev/sumW;
   function fill(t, kind, side, qty, price, reason){
@@ -489,11 +612,21 @@ function runStrategy(mode, c, F, PP){
     if(t<st) continue;
     if(firstC==null) firstC=cpx; lastC=cpx; lastT=t;
     if(dead) break;
+    let inBrk=false;
+    if(BXON){
+      if(bs){ const inside = cpx<=bs.hi && cpx>=bs.lo;
+        if(pos&&pos.fol&&+PP.bxTrail){ const pk=pos.side==='LONG'?Math.max(pos.pk||cpx,cpx):Math.min(pos.pk||cpx,cpx); pos.pk=pk; const dd=pos.side==='LONG'?(pk-cpx)/pk*100:(cpx-pk)/pk*100; if(dd>=+PP.bxTrail) fill(t,'CLOSE',pos.side,pos.qty,cpx,'추종 트레일링 청산'); }
+        if(inside || t-bs.t0>=(+PP.bxMaxD||30)*864e5){ if(pos&&pos.fol) fill(t,'CLOSE',pos.side,pos.qty,cpx,'박스 복귀: 추종 청산'); bs=null; bcnt=0; bdir=0; } else inBrk=true; }
+      else if(BH[i]!=null){ const x=+PP.bxX/100, hi=BH[i], lo=BL[i]; const d = cpx>hi*(1+x)?1 : cpx<lo*(1-x)?-1 : 0;
+        if(d && d===bdir) bcnt++; else { bdir=d; bcnt=d?1:0; }
+        if(d && bcnt>=+PP.bxN){ bs={dir:d,hi,lo,t0:t}; nBrk++; inBrk=true;
+          if(pos && (!+PP.bxSide || (d>0?pos.side==='SHORT':pos.side==='LONG'))) fill(t,'CLOSE',pos.side,pos.qty,cpx,'박스 이탈 손절 (전량)');
+          if(+PP.bxFol>0){ const u=unitFor(); fill(t,'OPEN',d>0?'LONG':'SHORT',u*trW[0]*PP.bxFol/cpx,cpx,'이탈 방향 추종 진입'); if(pos){ pos.fol=1; pos.unitN=u; pos.pk=cpx; } } } } }
     if(f.rsi15==null||f.pB==null) continue;
-    const rg = RG[i]; const blockAll = rg===9;
+    const rg = (inBrk && +PP.bxSide) ? bs.dir : RG[i]; const blockAll = rg===9 || (inBrk && !+PP.bxSide);
     const sigS = !blockAll && rg<=0 && f.rsi15>=PP.rsiS && f.pB>=PP.pbS && f.pos24>=PP.posS && (!+PP.useVwap||f.vwap>0);
     const sigL = !blockAll && rg>=0 && f.rsi15<=PP.rsiL && f.pB<=PP.pbL && f.pos24<=PP.posL && (!+PP.useVwap||f.vwap<0);
-    if(pos && blockAll && +PP.trendExit) fill(t,'CLOSE',pos.side,pos.qty,cpx,'장분위기가 횡보장이 아니라 웨돔 방식 중지 (전량 정리)');
+    if(pos && blockAll && !pos.fol && +PP.trendExit) fill(t,'CLOSE',pos.side,pos.qty,cpx,'장분위기가 횡보장이 아니라 웨돔 방식 중지 (전량 정리)');
     else if(pos && +PP.trendExit && ((rg>0&&pos.side==='SHORT')||(rg<0&&pos.side==='LONG'))) fill(t,'CLOSE',pos.side,pos.qty,cpx,`추세 필터: ${rg>0?'상승':'하락'}추세라 역방향 포지션 청산`);
     if(mode===2){
       let want = bias>0?'LONG':bias<0?'SHORT':null; if(blockAll||(want==='SHORT'&&rg>0)||(want==='LONG'&&rg<0)) want=null;
@@ -546,7 +679,7 @@ function runStrategy(mode, c, F, PP){
   const equity = dead? 0 : cash+unr;
   if(lastT!=null){ eq.push({t:lastT,v:equity,px:lastC}); daily.push({t:lastT,v:equity,px:lastC}); }
   const lastF = F[Math.min(F.length-1, (()=>{ let k=base.length-1; while(k>0 && base[k].t+ms>en) k--; return k; })())];
-  return {sym:c.sym, mode, acts, trades, eq, daily, pos, cash, unr, equity, mdd:dead?100:mdd, dead, fees:feesTot, bh: firstC? (lastC/firstC-1)*100 : 0, firstC, last:lastC, st, lastT, F:lastF, bias, box:lastBx};
+  return {sym:c.sym, mode, acts, trades, eq, daily, pos, cash, unr, equity, mdd:dead?100:mdd, dead, fees:feesTot, nBrk, bh: firstC? (lastC/firstC-1)*100 : 0, firstC, last:lastC, st, lastT, F:lastF, bias, box:lastBx};
 }
 function simulate(sym, F){ return runStrategy(+P.mode===2?2:1, {sym, base:K[sym].m5, h1:K[sym].h1, ms:M5, st:startMs(), eqStep:6}, F, P); }
 // ---------------- wedom positions ----------------
@@ -890,9 +1023,60 @@ function btPreset(k){ const today=new Date(Date.now()+KST).toISOString().slice(0
   const [s,e]=map[k]; $('btStart').value=s; $('btEnd').value=e; if(k==='m3'||k==='y1'){} }
 
 // ---------------- params ----------------
-function renderParams(){ $('params').innerHTML = Object.keys(DEF).map(k=>`<div><label>${PDESC[k][0]}</label><input id="p_${k}" type="${PDESC[k][1]||'number'}" step="any" value="${P[k]}"></div>`).join(''); }
+// [v2 UI] 파라미터를 그룹별 접기 패널로 렌더링 (입력 id p_키 는 그대로 유지)
+const PGROUPS = [
+  ['기본', ['start','capital','mode','session'], '시작 시각 · 자금 · 전략 버전'],
+  ['v2 스윙 코어', ['boxN','biasHi','biasLo','capDrop','core','oppTpMin'], '5일 박스로 코어 방향 결정'],
+  ['추세 필터', ['trend','trendN','trendPct','trendBand','trendExit','regAdx','regSlope','regConf'], '1번 신고가권 · 2번 이평 · 3번 장분위기'],
+  ['박스 이탈 규칙', ['bxX','bxN','bxSide','bxFol','bxDays','bxLag','bxMaxD','bxTrail'], '30일 박스 이탈 확정 · 방어'],
+  ['리스크 적응형 익절', ['adapt','riskHi','tpTight'], '매크로 리스크 높을 때 짧은 익절'],
+  ['진입 신호', ['rsiS','pbS','posS','rsiL','pbL','posL','useVwap'], 'RSI · %B · 24h 위치 · VWAP'],
+  ['분할 · 익절 · 손절', ['maxTr','trW','lev','addGap','cool','tp','tpFrac','flipMax','cutTr','stop'], '물량 · 간격 · 익절 지점 · 안전 손절'],
+  ['수수료', ['fee'], '편도 수수료']
+];
+function renderParams(){
+  const keys=Object.keys(DEF), used=new Set(), changed=k=>String(P[k])!==String(DEF[k]);
+  const box=k=>{ used.add(k); const ch=changed(k); return `<div class="pf${ch?' changed':''}"><label for="p_${k}">${PDESC[k][0]}</label><input id="p_${k}" type="${PDESC[k][1]||'number'}" step="any" value="${P[k]}">${ch?`<span class="pdef">기본값 ${DEF[k]}</span>`:''}</div>`; };
+  const group=(name,ks,desc,open)=>{ const list=ks.filter(k=>k in DEF); if(!list.length) return ''; const nch=list.filter(changed).length; const inner=list.map(box).join(''); return `<details class="fold pgroup" ${open||nch?'open':''}><summary><b>${name}</b> <span class="note">${desc}</span><span class="cnt">${list.length}개${nch?` · <span class="warn">변경 ${nch}</span>`:''}</span></summary><div class="grid-params">${inner}</div></details>`; };
+  let h=PGROUPS.map(([n,ks,d],i)=>group(n,ks,d,i===0)).join('');
+  const rest=keys.filter(k=>!used.has(k)); if(rest.length) h+=group('기타',rest,'분류 전 새 파라미터',true);
+  $('params').innerHTML=h;
+  const n=keys.filter(changed).length; if($('cfgDiff')) $('cfgDiff').innerHTML = n? `<span class="warn">기본값과 다른 값 ${n}개</span>` : '모든 값이 기본값이에요';
+}
 $('applyP').onclick=()=>{ const old=P.start; for(const k of Object.keys(DEF)){ const v=$('p_'+k).value; P[k]= (PDESC[k][1]==='text'||PDESC[k][1]==='datetime-local')? v : +v; } localStorage.setItem('wedomP',JSON.stringify(P)); $('cfgNote').textContent='계산 중...'; (old!==P.start? boot() : runAll()).then(()=>$('cfgNote').textContent='적용 완료'); };
 $('resetP').onclick=()=>{ P=Object.assign({},DEF); localStorage.removeItem('wedomP'); renderParams(); };
+// ---------------- [v2 UI] 상단 요약 · 표 정리 · 접기 버튼 (화면 전용, 계산 로직 없음) ----------------
+function renderKpi(){
+  const r=R.BTCUSDT;
+  if(r){ const ret=(r.equity/P.capital-1)*100, p=r.pos;
+    $('kpiAcctStart').textContent='$'+fmt(P.capital,0)+' 시작';
+    $('kpiAcct').innerHTML=`<span class="${cls(ret)}">$${fmt(r.equity)}</span> <small class="${cls(ret)}">${ret>=0?'+':''}${fmt(ret)}%</small>`;
+    $('kpiAcctSub').innerHTML = p? `<span class="pill ${p.side[0]}">${p.side==='LONG'?'롱':'숏'} ${p.tr}차</span>평단 ${pfmt(p.avg)} · 미실현 <span class="${cls(r.unr)}">${fmt(r.unr)}</span>` : '모의 포지션 없음';
+  }
+  const w=W.BTCUSDT;
+  if(w){ const st=w.steps[w.steps.length-1];
+    if(!st){ $('kpiWedom').innerHTML='<span class="mute">기록 없음</span>'; $('kpiWedomSub').textContent=''; }
+    else if(!st.L&&!st.S){ $('kpiWedom').innerHTML='<span class="mute">포지션 없음</span>'; $('kpiWedomSub').textContent='마지막 변동 '+kst(st.t)+' KST'; }
+    else { const parts=[]; if(st.L) parts.push(`<span class="pill L">롱</span>${fmt(st.L,3)}`); if(st.S) parts.push(`<span class="pill S">숏</span>${fmt(st.S,3)}`);
+      $('kpiWedom').innerHTML=parts.join(' ')+' <small class="mute">BTC</small>';
+      const e=st.e, ent=e&&e.p&&e.p.entry; $('kpiWedomSub').textContent=(ent?'평단 '+pfmt(ent)+' · ':'')+'마지막 변동 '+kst(st.t)+' KST'; }
+  }
+  try{ if(BTCD&&BTCD.length){ const R3=classifyRegime(BTCD,P), L=R3[R3.length-1]; let since=R3.length-1; while(since>0&&R3[since-1].reg===L.reg) since--;
+    const on = +P.trend===3||+P.trend===4 ? (L.reg==='SIDE'?'웨돔 방식 적용 중':'웨돔 방식 중지 (관망)') : '참고 지표';
+    $('regimeBadge').innerHTML='<b>'+REGNAME[L.reg]+'</b>'; $('kpiRegSub').innerHTML=`${R3.length-since}일째 · ${on}${L.pend?` · <span class="warn">${REGNAME[L.pend.to]} 전환 신호 ${L.pend.n}/${L.pend.need}</span>`:''}`; } }catch(e){ console.error(e); }
+  try{ const m=macroCalc(); if(m&&m.score!=null){ const s=m.score, lab=s>=75?'위험':s>=60?'경계':s>=40?'보통':'안정';
+    $('macroBadge').innerHTML='<b>'+fmt(s,0)+'</b> · '+lab; $('kpiRiskSub').textContent = s>=+P.riskHi && +P.adapt ? '짧은 익절 적용 구간 (기준 '+P.riskHi+')' : 'VIX·OVX·MOVE·브렌트 1년 백분위 평균'; } }catch(e){ console.error(e); }
+}
+// 표: 숫자 열을 찾아 오른쪽 정렬(class num). 열의 60% 이상이 숫자면 숫자 열로 본다.
+const NUMRE=/^[+\-−]?\$?[\d,]+(\.\d+)?(%|분|h|일|x|배)?(\s*(→|~)\s*[+\-−]?\$?[\d,]+(\.\d+)?%?)?$/;
+function tidyTable(t){ const rows=[...t.rows]; if(rows.length<2) return; const ncol=Math.max(...rows.map(r=>r.cells.length)); const head=rows.filter(r=>r.cells[0]&&r.cells[0].tagName==='TH');
+  for(let c=0;c<ncol;c++){ let n=0,num=0; for(const r of rows){ const td=r.cells[c]; if(!td||td.tagName!=='TD') continue; const x=td.textContent.trim(); if(!x||x==='-') continue; n++; if(NUMRE.test(x)) num++; }
+    const isNum = n>0 && num/n>=0.6; for(const r of rows){ const cell=r.cells[c]; if(cell) cell.classList.toggle('num', isNum); } } }
+const tidyObs=new MutationObserver(ms=>{ const seen=new Set(); for(const m of ms){ const t=m.target.closest?m.target.closest('table'):null; if(t&&!seen.has(t)){ seen.add(t); tidyTable(t); } } });
+document.querySelectorAll('table').forEach(t=>tidyObs.observe(t,{childList:true,subtree:true}));
+$('pOpenAll').onclick=()=>document.querySelectorAll('#params details').forEach(d=>d.open=true);
+$('pCloseAll').onclick=()=>document.querySelectorAll('#params details').forEach(d=>d.open=false);
+document.addEventListener('input',e=>{ if(e.target&&e.target.id&&e.target.id.startsWith('p_')){ const k=e.target.id.slice(2); const box=e.target.closest('.pf'); if(box) box.classList.toggle('changed', String(e.target.value)!==String(DEF[k])); const n=document.querySelectorAll('#params .pf.changed').length; $('cfgDiff').innerHTML = n? '<span class="warn">기본값과 다른 값 '+n+'개 (적용 전이면 아직 반영 안 됨)</span>' : '모든 값이 기본값이에요'; } });
 // ---------------- UI wiring ----------------
 function seg(id, items, cur, on){ $(id).innerHTML=items.map(([v,l])=>`<button data-v="${v}" class="${v===cur?'on':''}">${l}</button>`).join(''); $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ $(id).querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); on(b.dataset.v); }); }
 let activeTab='sim';
@@ -941,7 +1125,7 @@ function renderMacro(){ const r=macroCalc(); if(!r||r.score==null){ $('macroBadg
   $('macroNow').innerHTML=`<span style="color:${col}">${fmt(s,0)}</span> <span style="font-size:14px;color:${col}">${lab}</span>`;
   $('macroDetail').innerHTML=`0~40 안정 · 40~60 보통 · 60~75 경계 · 75+ 위험 (최근 1년 기준 상대 위치)<br><b>웨돔 관찰 결과 (9/28~10/26, 26일)</b>: 점수 60 이상인 날 웨돔 익절 폭 중앙값 <b>+0.78%</b>, 60 미만인 날 <b>+2.95%</b>. 점수가 높을수록 익절이 짧아지는 경향(순위상관 -0.51)이 있었어요. 기간이 짧고 박스 위치 영향도 섞여 있어 참고용이에요.`;
   $('macroTable').innerHTML='<tr><th>지표</th><th>현재</th><th>5일 변화</th><th>1년 중 위치</th><th>점수 반영</th><th>기준일</th></tr>'+r.rows.map(x=>{ const pc=x.p, c2 = pc>=80?'down':pc>=60?'warn':pc<=20?'up':''; return `<tr><td>${x.name}</td><td>${fmt(x.v, x.v>=100?1:2)}${x.extra?' <span class="mute">('+x.extra+')</span>':''}</td><td>${x.d5==null?'-':pct(x.d5)}</td><td class="${c2}">${fmt(pc,0)}%</td><td>${x.inScore?'O':'<span class="mute">참고</span>'}</td><td class="mute">${new Date(x.t+KST).toISOString().slice(0,10)}</td></tr>`; }).join(''); }
-async function runAll(){ for(const s of SYMS){ R[s]=simulate(s, features(s)); W[s]=wedomFor(s); } renderCards(); renderSignals(); renderActs(); drawActive(); try{ renderRegime(); }catch(e){ console.error(e); } try{ renderMacro(); }catch(e){ console.error(e); } const liveTxt = ` · 웨돔·뉴스 ${kst(dataAt())}`;
+async function runAll(){ for(const s of SYMS){ R[s]=simulate(s, features(s)); W[s]=wedomFor(s); } renderCards(); renderSignals(); renderActs(); drawActive(); try{ renderRegime(); }catch(e){ console.error(e); } try{ renderMacro(); }catch(e){ console.error(e); } try{ renderKpi(); }catch(e){ console.error(e); } const liveTxt = ` · 웨돔·뉴스 ${kst(dataAt())}`;
   $('status').textContent = (SRC==='embedded' ? `저장된 차트 데이터 사용 (거래소 API 접속 불가, 마지막 갱신 ${kst(D.updatedAt)})` : `업데이트 ${kst(Date.now())} KST · ${({bybit:'바이비트',bitget:'비트겟',binance:'바이낸스'})[SRC]} 실시간 · 1분마다 자동 갱신`) + liveTxt; }
 async function boot(){ $('status').textContent='바이낸스 차트·웨돔 최신 매매 불러오는 중...'; const dp=fetchDirect().catch(e=>console.warn('더따리 직접 조회 실패, 파일 데이터 사용', e)); await loadAll(); await dp; await runAll(); }
 window.addEventListener('resize',()=>drawActive());
