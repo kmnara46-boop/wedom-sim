@@ -29,6 +29,11 @@ try {
     p: e.position ? { sym: e.position.rawSymbol, side: e.position.side, size: e.position.size, entry: e.position.entryPrice, lev: e.position.leverage } : null,
     prev: e.previous ? e.previous.size : null, mark: e.markPrice, exit: e.exitPrice, pnl: e.pnlUsd, pnlPct: e.pnlPct }));
   log('events', events.length);
+  // 웨돔 원본 이벤트 영구 보관 (id 기준 누적, 지우지 않음) -> archive/wedom_events.json (워크플로가 커밋)
+  try { await fs.mkdir('archive', { recursive: true }); let arc = []; try { arc = JSON.parse(await fs.readFile('archive/wedom_events.json', 'utf8')); } catch (e) { }
+    const m = new Map(arc.map(x => [x.id, x])); let added = 0; for (const e of ev) { if (e && e.id && !m.has(e.id)) { m.set(e.id, e); added++; } }
+    const all = [...m.values()].sort((a, b) => a.at - b.at); await fs.writeFile('archive/wedom_events.json', JSON.stringify(all, null, 0)); log('archive', all.length, '+' + added);
+  } catch (e) { log('archive failed', e.message); }
 } catch (e) { log('events failed', e.message); }
 
 // 2) news
