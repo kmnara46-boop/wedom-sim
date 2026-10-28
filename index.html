@@ -163,6 +163,9 @@ details.fold.plain>.fold-body{padding:4px 0 0}
     <div class="panel"><div class="panel-h"><h3>현재 신호 상태</h3><span class="note">초록 굵은 글씨 = 조건 충족</span></div><div id="signals"></div></div>
   </div>
 
+  <div class="sec-title">실시간 장부 <span class="note">시작 시점의 규칙을 고정해 앞으로의 성적만 기록 (고쳐지지 않는 기록)</span></div>
+  <div class="panel" id="ledgerPanel"><div id="ledgerBody" class="note">장부를 불러오는 중...</div></div>
+
   <div class="sec-title">차트</div>
   <div class="panel" style="padding:10px 10px 6px">
     <div class="toolbar">
@@ -1125,6 +1128,17 @@ function renderMacro(){ const r=macroCalc(); if(!r||r.score==null){ $('macroBadg
   $('macroNow').innerHTML=`<span style="color:${col}">${fmt(s,0)}</span> <span style="font-size:14px;color:${col}">${lab}</span>`;
   $('macroDetail').innerHTML=`0~40 안정 · 40~60 보통 · 60~75 경계 · 75+ 위험 (최근 1년 기준 상대 위치)<br><b>웨돔 관찰 결과 (9/28~10/26, 26일)</b>: 점수 60 이상인 날 웨돔 익절 폭 중앙값 <b>+0.78%</b>, 60 미만인 날 <b>+2.95%</b>. 점수가 높을수록 익절이 짧아지는 경향(순위상관 -0.51)이 있었어요. 기간이 짧고 박스 위치 영향도 섞여 있어 참고용이에요.`;
   $('macroTable').innerHTML='<tr><th>지표</th><th>현재</th><th>5일 변화</th><th>1년 중 위치</th><th>점수 반영</th><th>기준일</th></tr>'+r.rows.map(x=>{ const pc=x.p, c2 = pc>=80?'down':pc>=60?'warn':pc<=20?'up':''; return `<tr><td>${x.name}</td><td>${fmt(x.v, x.v>=100?1:2)}${x.extra?' <span class="mute">('+x.extra+')</span>':''}</td><td>${x.d5==null?'-':pct(x.d5)}</td><td class="${c2}">${fmt(pc,0)}%</td><td>${x.inScore?'O':'<span class="mute">참고</span>'}</td><td class="mute">${new Date(x.t+KST).toISOString().slice(0,10)}</td></tr>`; }).join(''); }
+let LEDGER=null;
+async function loadLedger(){ try{ const r=await fetch('ledger.json?ts='+Date.now()); if(!r.ok) throw 0; LEDGER=await r.json(); }catch(e){ LEDGER=LEDGER||{err:1}; } renderLedger(); }
+function renderLedger(){ const el=document.getElementById('ledgerBody'); if(!el) return;
+  if(!LEDGER||LEDGER.err){ el.innerHTML='<span class="mute">장부는 클라우드 사이트(GitHub)에서 10분마다 계산돼요. 이 화면에서는 불러오지 못했어요.</span>'; return; }
+  const rows=LEDGER.versions.map(v=>{ const s=v.state, i=v.info; if(!s) return `<tr><td>${i.v}</td><td>${i.startKST}</td><td colspan="6" class="mute">${v.status||v.error||'-'}</td></tr>`;
+    const pos=s.pos? `<span class="pill ${s.pos.side[0]}">${s.pos.side==='LONG'?'롱':'숏'} ${s.pos.tr}차</span> 평단 ${pfmt(s.pos.avg)} · 미실현 <span class="${cls(s.pos.unr)}">${fmt(s.pos.unr)}</span>` : '<span class="mute">포지션 없음</span>';
+    return `<tr><td><b>${i.v}</b>${i.v===LEDGER.current?' <span class="pill">현재</span>':''}</td><td>${i.startKST} KST</td><td class="num ${cls(s.ret)}">${s.ret>=0?'+':''}${fmt(s.ret)}%</td><td class="num">${fmt(s.mdd,1)}%</td><td class="num">${s.trades}${s.winRate!=null?' · '+fmt(s.winRate,0)+'%':''}</td><td>${pos}</td><td class="num ${cls(s.btcRet)}">${s.btcRet>=0?'+':''}${fmt(s.btcRet)}%</td><td class="num mute">${kst(s.updatedAt)}${s.mismatch?' <span class="warn">재계산 불일치 '+s.mismatch+'</span>':''}</td></tr>`; }).join('');
+  const cur=LEDGER.versions.find(v=>v.info.v===LEDGER.current); const tr=(cur&&cur.trades||[]).slice().reverse().slice(0,10);
+  el.innerHTML=`<div class="scroll" style="max-height:none"><table><tr><th>버전</th><th>시작</th><th class="num">수익률</th><th class="num">최대낙폭</th><th class="num">거래 · 승률</th><th>현재 포지션</th><th class="num">같은 기간 BTC</th><th class="num">갱신</th></tr>${rows}</table></div>`+
+    (tr.length? `<div class="note" style="margin:10px 0 4px">최근 확정 거래 (현재 버전)</div><div class="scroll"><table><tr><th>진입</th><th>종료</th><th>방향</th><th class="num">분할</th><th class="num">평단 → 종료</th><th class="num">손익($)</th></tr>${tr.map(t=>`<tr><td>${kst(t.openT)}</td><td>${kst(t.closeT)}</td><td><span class="pill ${t.side[0]}">${t.side==='LONG'?'롱':'숏'}</span></td><td class="num">${t.tr}</td><td class="num">${pfmt(t.avg)} → ${pfmt(t.exit)}</td><td class="num ${cls(t.pnl)}">${fmt(t.pnl)}</td></tr>`).join('')}</table></div>` : '<div class="note" style="margin-top:8px">아직 확정된 거래가 없어요. 장부는 시작 시점 이후 새로 생긴 신호로만 매매해요.</div>');
+  if(typeof alignTables==='function') try{ alignTables(); }catch(e){} }
 async function runAll(){ for(const s of SYMS){ R[s]=simulate(s, features(s)); W[s]=wedomFor(s); } renderCards(); renderSignals(); renderActs(); drawActive(); try{ renderRegime(); }catch(e){ console.error(e); } try{ renderMacro(); }catch(e){ console.error(e); } try{ renderKpi(); }catch(e){ console.error(e); } const liveTxt = ` · 웨돔·뉴스 ${kst(dataAt())}`;
   $('status').textContent = (SRC==='embedded' ? `저장된 차트 데이터 사용 (거래소 API 접속 불가, 마지막 갱신 ${kst(D.updatedAt)})` : `업데이트 ${kst(Date.now())} KST · ${({bybit:'바이비트',bitget:'비트겟',binance:'바이낸스'})[SRC]} 실시간 · 1분마다 자동 갱신`) + liveTxt; }
 async function boot(){ $('status').textContent='바이낸스 차트·웨돔 최신 매매 불러오는 중...'; const dp=fetchDirect().catch(e=>console.warn('더따리 직접 조회 실패, 파일 데이터 사용', e)); await loadAll(); await dp; await runAll(); }
@@ -1137,6 +1151,7 @@ window.addEventListener('resize',()=>drawActive());
   setInterval(async()=>{ try{ await refreshTail(); await runAll(); }catch(e){ console.error(e); } }, 60000);
   const syncWedom = async()=>{ try{ let ch=await reloadLive(); try{ ch=(await fetchDirect())||ch; }catch(e){ console.warn(e); } if(ch){ renderNews(); await runAll(); } }catch(e){ console.error(e); } };
   setInterval(syncWedom, 2*60000);
+  loadLedger(); setInterval(loadLedger, 3*60000);
   document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') syncWedom(); });
   window.addEventListener('focus', syncWedom);
 })();
