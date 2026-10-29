@@ -1150,7 +1150,7 @@ function renderLedgerComparison(v){
   const c=ledgerComparisonData(v,D), s=v.state;
   const esc=x=>String(x??'').replace(/[&<>"']/g,z=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[z]));
   const pct=n=>n==null?'해당 없음':`<span class="${cls(n)}">${n>=0?'+':''}${fmt(n)}%</span>`;
-  const dollars=n=>`<span class="${cls(n)}">${n>=0?'+':'-'}${fmt(Math.abs(n))}</span>`;
+  const dollars=n=>`<span class="${cls(n)}">${n>=0?'+':'-'}$${fmt(Math.abs(n))}</span>`;
   const table=(rows,empty)=>!rows.length?`<p class="note">${empty}</p>`:`<div class="scroll cmp-events" tabindex="0" role="region" aria-label="매매 시점과 가격 내역"><table><thead><tr><th>시각(KST) · 구분</th><th class="num">가격 / 당시 평단</th><th class="num">가격 변화율</th></tr></thead><tbody>${rows.slice(-8).reverse().map(a=>`<tr><td>${kst(a.t)}<br><span class="${a.side==='LONG'?'up':'down'}">${a.side==='LONG'?'롱':'숏'}</span> ${esc(a.label)}</td><td class="num">${Number.isFinite(a.px)?pfmt(a.px):'미확인'}<br><span class="mute">평단 ${Number.isFinite(a.avg)?pfmt(a.avg):'미확인'}</span></td><td class="num">${pct(a.move)}</td></tr>`).join('')}</tbody></table></div>`;
   const wlast=c.wedom.at(-1), mlast=c.model.at(-1);
   const at=a=>a?`${kst(a.t)} ${a.side==='LONG'?'롱':'숏'} ${esc(a.label)}`:'기간 내 기록 없음';
