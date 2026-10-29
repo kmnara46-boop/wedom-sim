@@ -34,11 +34,11 @@ for (const info of meta.versions) {
     const add = r.trades.slice(prev.length).map(t => ({ ...t, recordedAt: now }));
     if (add.length) await fs.appendFile(dir + '/trades.jsonl', add.map(t => JSON.stringify(t)).join('\n') + '\n');
     const allT = prev.concat(add); const wins = allT.filter(t => t.pnl > 0).length;
-    const state = { updatedAt: now, lastBar: bars.length ? bars[bars.length - 1].t : null, equity: r.equity, ret: (r.equity / PP.capital - 1) * 100, mdd: r.mdd, trades: allT.length, winRate: allT.length ? wins / allT.length * 100 : null,
+    const state = { updatedAt: now, lastBar: bars.length ? bars[bars.length - 1].t : null, equity: r.equity, ret: (r.equity / PP.capital - 1) * 100, mdd: r.mdd, realizedPnl: r.cash - PP.capital, unrealizedPnl: r.unr, fees: r.fees, actionCount: r.acts.length, trades: allT.length, winRate: allT.length ? wins / allT.length * 100 : null,
       pos: r.pos ? { side: r.pos.side, qty: r.pos.qty, avg: r.pos.avg, tr: r.pos.tr, unr: r.unr } : null, btcRet: r.bh, mismatch, newTrades: add.length };
     await fs.writeFile(dir + '/state.json', JSON.stringify(state, null, 1));
     const eq = r.eq.filter((p, i) => i % 4 === 0).map(p => [p.t, Math.round(p.v * 100) / 100, p.px]);
-    summary.versions.push({ info, state, eq, trades: allT.slice(-50) });
+    summary.versions.push({ info, state, eq, trades: allT.slice(-50), actions: r.acts.slice(-100) });
     log(info.v, 'ret', state.ret.toFixed(2), 'trades', allT.length, 'mismatch', mismatch);
   } catch (e) { log(info.v, 'failed', e.message); summary.versions.push({ info, error: e.message }); }
 }
