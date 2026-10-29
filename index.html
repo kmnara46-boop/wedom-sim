@@ -133,6 +133,7 @@ details.fold.plain>.fold-body{padding:4px 0 0}
 /* --- 반응형 --- */
 @media(max-width:1100px){.g-5-7,.g-1-1,.g-4-8{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){header{flex-wrap:wrap;padding:8px 12px;gap:6px}.status{order:3;max-width:100%;width:100%;text-align:left}nav{order:2;width:100%}main{padding:10px 12px 32px}.kpis{padding:0 12px;gap:8px}.kpi-v{font-size:17px}.form-rows{grid-template-columns:1fr}.cfg-bar{top:96px}#mainChart{height:340px!important}}
+.cmp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.cmp-col{min-width:0;border:1px solid var(--line);border-radius:var(--r-s);padding:12px;background:var(--panel-2)}.cmp-col h3{margin:0 0 10px;font-size:14px}.cmp-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}.cmp-metrics strong{display:block;font-size:20px;font-variant-numeric:tabular-nums}.cmp-period{margin:4px 0 12px}.cmp-events{margin-top:10px;max-height:280px}.cmp-foot{margin-bottom:0}.cmp-col p{margin-bottom:0}.cmp-col td{padding:8px}.cmp-col .note{line-height:1.6}@media(max-width:760px){.cmp-grid{grid-template-columns:1fr}.cmp-metrics strong{font-size:18px}.cmp-col{padding:10px}.cmp-period{overflow-wrap:anywhere}}
 </style>
 </head>
 <body>
@@ -164,7 +165,7 @@ details.fold.plain>.fold-body{padding:4px 0 0}
   </div>
 
   <div class="sec-title">실시간 장부 <span class="note">시작 시점의 규칙을 고정해 앞으로의 성적만 기록 (고쳐지지 않는 기록)</span></div>
-  <div class="panel" id="ledgerPanel"><div id="ledgerBody" class="note">장부를 불러오는 중...</div></div>
+  <div class="panel" id="ledgerPanel"><div id="ledgerBody" class="note">장부를 불러오는 중...</div><details id="ledgerCompare" open><summary style="margin-top:14px;font-size:14px;font-weight:600;cursor:pointer">모델 손익 · 웨돔 정리 시점 비교</summary><div id="ledgerCompareBody" aria-live="polite" aria-atomic="true" style="margin-top:10px">장부를 불러오는 중...</div></details></div>
 
   <div class="sec-title">차트</div>
   <div class="panel" style="padding:10px 10px 6px">
@@ -1130,16 +1131,58 @@ function renderMacro(){ const r=macroCalc(); if(!r||r.score==null){ $('macroBadg
   $('macroTable').innerHTML='<tr><th>지표</th><th>현재</th><th>5일 변화</th><th>1년 중 위치</th><th>점수 반영</th><th>기준일</th></tr>'+r.rows.map(x=>{ const pc=x.p, c2 = pc>=80?'down':pc>=60?'warn':pc<=20?'up':''; return `<tr><td>${x.name}</td><td>${fmt(x.v, x.v>=100?1:2)}${x.extra?' <span class="mute">('+x.extra+')</span>':''}</td><td>${x.d5==null?'-':pct(x.d5)}</td><td class="${c2}">${fmt(pc,0)}%</td><td>${x.inScore?'O':'<span class="mute">참고</span>'}</td><td class="mute">${new Date(x.t+KST).toISOString().slice(0,10)}</td></tr>`; }).join(''); }
 let LEDGER=null;
 async function loadLedger(){ try{ const r=await fetch('ledger.json?ts='+Date.now()); if(!r.ok) throw 0; LEDGER=await r.json(); }catch(e){ LEDGER=LEDGER||{err:1}; } renderLedger(); }
+// Display only: frozen forward-ledger fills and observed streamer events. No engine changes.
+function ledgerComparisonData(v, data){
+  const s=v.state, from=v.info.start, to=s.lastBar==null?null:s.lastBar+900000;
+  const acts=Array.isArray(v.actions)?v.actions:[];
+  const known={OPEN:'진입',ADD:'추가',TP:'부분 익절',CUT:'부분 정리',CLOSE:'전량 정리',STOP:'손절'};
+  const change=(side,avg,px)=>Number.isFinite(avg)&&avg>0&&Number.isFinite(px)?(side==='SHORT'?avg-px:px-avg)/avg*100:null;
+  const model=acts.filter(a=>a.t>=from&&to!=null&&a.t<=to).map(a=>({t:a.t,side:a.side,label:known[a.kind]||'정리',px:a.price,avg:a.avg,move:['OPEN','ADD'].includes(a.kind)?null:change(a.side,a.avg,a.price)}));
+  const events=(data.events||[]).filter(e=>e.p&&e.p.sym==='BTCUSDT'&&e.at>=from&&to!=null&&e.at<=to&&/^POSITION_(OPEN|INCREASE|DECREASE|CLOSE)$/.test(e.type)).sort((a,b)=>a.at-b.at);
+  const wedom=events.map(e=>{const closing=/DECREASE|CLOSE/.test(e.type),px=closing?(e.exit??e.mark):e.mark;return {t:e.at,side:e.p.side,label:({POSITION_OPEN:'진입 관측',POSITION_INCREASE:'추가 관측',POSITION_DECREASE:'부분 정리',POSITION_CLOSE:'전량 정리'})[e.type],px,avg:e.p.entry,move:closing?change(e.p.side,e.p.entry,px):null};});
+  const unr=Number.isFinite(s.unrealizedPnl)?s.unrealizedPnl:(s.pos?.unr??0);
+  const realized=Number.isFinite(s.realizedPnl)?s.realizedPnl:s.equity-v.info.capital-unr;
+  return {from,to,model,wedom,realized,unr,hasActions:Array.isArray(v.actions),modelCount:s.actionCount??model.length};
+}
+function renderLedgerComparison(v){
+  const el=document.getElementById('ledgerCompareBody'); if(!el)return;
+  if(!v?.state){el.textContent='장부 계산 결과를 기다리고 있어요.';return;}
+  const c=ledgerComparisonData(v,D), s=v.state;
+  const esc=x=>String(x??'').replace(/[&<>"']/g,z=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[z]));
+  const pct=n=>n==null?'해당 없음':`<span class="${cls(n)}">${n>=0?'+':''}${fmt(n)}%</span>`;
+  const dollars=n=>`<span class="${cls(n)}">${n>=0?'+':'-'}${fmt(Math.abs(n))}</span>`;
+  const table=(rows,empty)=>!rows.length?`<p class="note">${empty}</p>`:`<div class="scroll cmp-events" tabindex="0" role="region" aria-label="매매 시점과 가격 내역"><table><thead><tr><th>시각(KST) · 구분</th><th class="num">가격 / 당시 평단</th><th class="num">가격 변화율</th></tr></thead><tbody>${rows.slice(-8).reverse().map(a=>`<tr><td>${kst(a.t)}<br><span class="${a.side==='LONG'?'up':'down'}">${a.side==='LONG'?'롱':'숏'}</span> ${esc(a.label)}</td><td class="num">${Number.isFinite(a.px)?pfmt(a.px):'미확인'}<br><span class="mute">평단 ${Number.isFinite(a.avg)?pfmt(a.avg):'미확인'}</span></td><td class="num">${pct(a.move)}</td></tr>`).join('')}</tbody></table></div>`;
+  const wlast=c.wedom.at(-1), mlast=c.model.at(-1);
+  const at=a=>a?`${kst(a.t)} ${a.side==='LONG'?'롱':'숏'} ${esc(a.label)}`:'기간 내 기록 없음';
+  const stale=Date.now()-s.updatedAt>3600000;
+  el.innerHTML=`<div class="note cmp-period">공통 관찰 구간: ${esc(v.info.startKST)} ~ ${c.to?kst(c.to):'계산 대기'} KST · 장부 ${esc(v.info.v)}${stale?' <span class="warn">장부 갱신 1시간 이상 지연</span>':''}${s.mismatch?' <span class="warn">재계산 불일치: '+Number(s.mismatch)+'</span>':''}<br>웨돔 자료 갱신: ${D.updatedAt?kst(D.updatedAt):'미확인'} KST</div>
+  <div class="cmp-grid">
+    <section class="cmp-col" aria-label="모델 장부 비교"><h3>모델 장부 <span class="note">고정 규칙 · 모의매매</span></h3>
+      <div class="cmp-metrics"><div><span class="note">실현손익 (수수료 차감)</span><strong>${dollars(c.realized)}</strong></div><div><span class="note">미실현손익</span><strong>${dollars(c.unr)}</strong></div></div>
+      <div class="note">순손익 = 실현 + 미실현 · 확정 거래 ${s.trades}건 (전량 종료 기준)<br>최근 행동: ${at(mlast)}</div>
+      ${table(c.model,c.hasActions?'기간 내 모델 매매가 없어요.':'상세 행동 데이터 준비 중이에요. 다음 클라우드 계산 후 표시돼요.')}
+      <p class="note">진입·추가·부분 정리 포함 ${c.modelCount}건 중 최근 최대 8건. 수수료는 미청산 포지션의 진입 비용도 포함해요.</p>
+    </section>
+    <section class="cmp-col" aria-label="웨돔 실제 관측 비교"><h3>웨돔 <span class="note">방송 화면 관측 · BTC만</span></h3>
+      <div class="cmp-metrics"><div><span class="note">진입·추가 관측</span><strong>${c.wedom.filter(a=>/관측/.test(a.label)).length}건</strong></div><div><span class="note">부분·전량 정리</span><strong>${c.wedom.filter(a=>!/관측/.test(a.label)).length}건</strong></div></div>
+      <div class="note">전체 계좌·미실현손익 미확인, 수익률 비교 제외<br>최근 행동: ${at(wlast)}</div>
+      ${table(c.wedom,'공통 구간 내 웨돔 BTC 관측 기록이 없어요. 매매를 하지 않았다는 뜻은 아니에요.')}
+      <p class="note">관측 ${c.wedom.length}건 중 최근 8건. 진입·추가 가격은 체결가가 아닌 관측 시점 시장가예요.</p>
+    </section>
+  </div><p class="note cmp-foot">변화율은 정리 건만 표시 = 당시 평단 대비 정리 가격의 방향 보정 수익폭 (숏은 가격 하락이 +). 레버리지·수수료 미반영이며 계좌 수익률이 아니에요. 방송 관측과 15분봉 모델은 시각 기준이 달라 일대일로 짝짓지 않아요. 관측 누락 가능성이 있어요.</p>`;
+}
+
 function renderLedger(){ const el=document.getElementById('ledgerBody'); if(!el) return;
-  if(!LEDGER||LEDGER.err){ el.innerHTML='<span class="mute">장부는 클라우드 사이트(GitHub)에서 10분마다 계산돼요. 이 화면에서는 불러오지 못했어요.</span>'; return; }
+  if(!LEDGER||LEDGER.err){ document.getElementById('ledgerCompareBody').textContent='장부 데이터를 불러오지 못했어요.'; el.innerHTML='<span class="mute">장부는 클라우드 사이트(GitHub)에서 10분마다 계산돼요. 이 화면에서는 불러오지 못했어요.</span>'; return; }
   const rows=LEDGER.versions.map(v=>{ const s=v.state, i=v.info; if(!s) return `<tr><td>${i.v}</td><td>${i.startKST}</td><td colspan="6" class="mute">${v.status||v.error||'-'}</td></tr>`;
     const pos=s.pos? `<span class="pill ${s.pos.side[0]}">${s.pos.side==='LONG'?'롱':'숏'} ${s.pos.tr}차</span> 평단 ${pfmt(s.pos.avg)} · 미실현 <span class="${cls(s.pos.unr)}">${fmt(s.pos.unr)}</span>` : '<span class="mute">포지션 없음</span>';
     return `<tr><td><b>${i.v}</b>${i.v===LEDGER.current?' <span class="pill">현재</span>':''}</td><td>${i.startKST} KST</td><td class="num ${cls(s.ret)}">${s.ret>=0?'+':''}${fmt(s.ret)}%</td><td class="num">${fmt(s.mdd,1)}%</td><td class="num">${s.trades}${s.winRate!=null?' · '+fmt(s.winRate,0)+'%':''}</td><td>${pos}</td><td class="num ${cls(s.btcRet)}">${s.btcRet>=0?'+':''}${fmt(s.btcRet)}%</td><td class="num mute">${kst(s.updatedAt)}${s.mismatch?' <span class="warn">재계산 불일치 '+s.mismatch+'</span>':''}</td></tr>`; }).join('');
   const cur=LEDGER.versions.find(v=>v.info.v===LEDGER.current); const tr=(cur&&cur.trades||[]).slice().reverse().slice(0,10);
   el.innerHTML=`<div class="scroll" style="max-height:none"><table><tr><th>버전</th><th>시작</th><th class="num">수익률</th><th class="num">최대낙폭</th><th class="num">거래 · 승률</th><th>현재 포지션</th><th class="num">같은 기간 BTC</th><th class="num">갱신</th></tr>${rows}</table></div>`+
     (tr.length? `<div class="note" style="margin:10px 0 4px">최근 확정 거래 (현재 버전)</div><div class="scroll"><table><tr><th>진입</th><th>종료</th><th>방향</th><th class="num">분할</th><th class="num">평단 → 종료</th><th class="num">손익($)</th></tr>${tr.map(t=>`<tr><td>${kst(t.openT)}</td><td>${kst(t.closeT)}</td><td><span class="pill ${t.side[0]}">${t.side==='LONG'?'롱':'숏'}</span></td><td class="num">${t.tr}</td><td class="num">${pfmt(t.avg)} → ${pfmt(t.exit)}</td><td class="num ${cls(t.pnl)}">${fmt(t.pnl)}</td></tr>`).join('')}</table></div>` : '<div class="note" style="margin-top:8px">아직 확정된 거래가 없어요. 장부는 시작 시점 이후 새로 생긴 신호로만 매매해요.</div>');
+  renderLedgerComparison(cur);
   if(typeof alignTables==='function') try{ alignTables(); }catch(e){} }
-async function runAll(){ for(const s of SYMS){ R[s]=simulate(s, features(s)); W[s]=wedomFor(s); } renderCards(); renderSignals(); renderActs(); drawActive(); try{ renderRegime(); }catch(e){ console.error(e); } try{ renderMacro(); }catch(e){ console.error(e); } try{ renderKpi(); }catch(e){ console.error(e); } const liveTxt = ` · 웨돔·뉴스 ${kst(dataAt())}`;
+async function runAll(){ for(const s of SYMS){ R[s]=simulate(s, features(s)); W[s]=wedomFor(s); } renderCards(); renderSignals(); renderActs(); drawActive(); try{ renderRegime(); }catch(e){ console.error(e); } try{ renderMacro(); }catch(e){ console.error(e); } try{ renderKpi(); }catch(e){ console.error(e); } if(LEDGER&&!LEDGER.err)renderLedger(); const liveTxt = ` · 웨돔·뉴스 ${kst(dataAt())}`;
   $('status').textContent = (SRC==='embedded' ? `저장된 차트 데이터 사용 (거래소 API 접속 불가, 마지막 갱신 ${kst(D.updatedAt)})` : `업데이트 ${kst(Date.now())} KST · ${({bybit:'바이비트',bitget:'비트겟',binance:'바이낸스'})[SRC]} 실시간 · 1분마다 자동 갱신`) + liveTxt; }
 async function boot(){ $('status').textContent='바이낸스 차트·웨돔 최신 매매 불러오는 중...'; const dp=fetchDirect().catch(e=>console.warn('더따리 직접 조회 실패, 파일 데이터 사용', e)); await loadAll(); await dp; await runAll(); }
 window.addEventListener('resize',()=>drawActive());
