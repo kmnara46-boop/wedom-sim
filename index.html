@@ -134,6 +134,7 @@ details.fold.plain>.fold-body{padding:4px 0 0}
 @media(max-width:1100px){.g-5-7,.g-1-1,.g-4-8{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){header{flex-wrap:wrap;padding:8px 12px;gap:6px}.status{order:3;max-width:100%;width:100%;text-align:left}nav{order:2;width:100%}main{padding:10px 12px 32px}.kpis{padding:0 12px;gap:8px}.kpi-v{font-size:17px}.form-rows{grid-template-columns:1fr}.cfg-bar{top:96px}#mainChart{height:340px!important}}
 .cmp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.cmp-col{min-width:0;border:1px solid var(--line);border-radius:var(--r-s);padding:12px;background:var(--panel-2)}.cmp-col h3{margin:0 0 10px;font-size:14px}.cmp-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}.cmp-metrics strong{display:block;font-size:20px;font-variant-numeric:tabular-nums}.cmp-period{margin:4px 0 12px}.cmp-events{margin-top:10px;max-height:280px}.cmp-foot{margin-bottom:0}.cmp-col p{margin-bottom:0}.cmp-col td{padding:8px}.cmp-col .note{line-height:1.6}@media(max-width:760px){.cmp-grid{grid-template-columns:1fr}.cmp-metrics strong{font-size:18px}.cmp-col{padding:10px}.cmp-period{overflow-wrap:anywhere}}
+.calc-guide{width:100%;margin:0 0 10px;line-height:1.7}.calc-result+.calc-result{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}.calc-title{font-weight:600;margin-bottom:8px}.calc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.calc-grid b{display:block;color:var(--mute);font-size:12px}.calc-grid span{font-size:13px;line-height:1.7;overflow-wrap:anywhere}.calc-warning{font-size:12px;line-height:1.7;margin-bottom:8px}.calc-detail{padding:8px 0;font-size:12px;line-height:1.7}.calc-hashes>div{display:grid;grid-template-columns:100px minmax(0,1fr);gap:8px}.calc-hashes code,.calc-params{overflow-wrap:anywhere;word-break:break-word}.calc-detail pre{max-height:260px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}.calc-detail summary{cursor:pointer}#btConditions .fold-body{min-width:0}@media(max-width:640px){.calc-grid{grid-template-columns:1fr}.calc-hashes>div{grid-template-columns:70px minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -165,7 +166,7 @@ details.fold.plain>.fold-body{padding:4px 0 0}
   </div>
 
   <div class="sec-title">실시간 장부 <span class="note">시작 시점의 규칙을 고정해 앞으로의 성적만 기록 (고쳐지지 않는 기록)</span></div>
-  <div class="panel" id="ledgerPanel"><div id="ledgerBody" class="note">장부를 불러오는 중...</div><details id="ledgerCompare" open><summary style="margin-top:14px;font-size:14px;font-weight:600;cursor:pointer">모델 손익 · 웨돔 정리 시점 비교</summary><div id="ledgerCompareBody" aria-live="polite" aria-atomic="true" style="margin-top:10px">장부를 불러오는 중...</div></details></div>
+  <div class="panel" id="ledgerPanel"><p class="note calc-guide" id="ledgerCalcNotice">기존 장부는 버전별 동결 규칙과 시작 시각을 유지해요.</p><div id="ledgerBody" class="note">장부를 불러오는 중...</div><details id="ledgerCompare" open><summary style="margin-top:14px;font-size:14px;font-weight:600;cursor:pointer">모델 손익 · 웨돔 정리 시점 비교</summary><div id="ledgerCompareBody" aria-live="polite" aria-atomic="true" style="margin-top:10px">장부를 불러오는 중...</div></details></div>
 
   <div class="sec-title">차트</div>
   <div class="panel" style="padding:10px 10px 6px">
@@ -297,8 +298,10 @@ details.fold.plain>.fold-body{padding:4px 0 0}
       </div>
       <div class="fl"></div>
       <div class="fv">
+        <div class="note calc-guide">계산 전 45일 데이터를 준비해요. 기간·봉·출처·복리·비용·리스크 입력이 다르면 수익률도 달라요. 장부와 비교할 때 계산조건을 함께 확인하세요.</div>
         <button class="btn" id="btRun">백테스트 실행</button>
         <button class="btn ghost" id="btCsv">거래내역 CSV</button>
+        <button class="btn ghost" id="btMeta" disabled>계산조건 JSON</button>
         <button class="btn ghost" id="btClear">저장 데이터 지우기</button>
         <span class="note" id="btStatus">종목·전략·기간을 고르고 실행하세요. 파라미터는 '전략 설정' 탭 값을 그대로 써요.</span>
       </div>
@@ -312,6 +315,8 @@ details.fold.plain>.fold-body{padding:4px 0 0}
     <div class="toolbar" style="margin-top:10px"><div class="seg" id="btSegSym"></div><span class="note">막판 20% = 구간 마지막 20% 기간 동안의 손익 (박스가 깨질 때 손실이 여기 몰려요)</span></div>
     <div class="scroll" style="max-height:520px"><table id="btSegTable"></table></div>
   </div>
+  <div class="sec-title">계산조건 <span class="note">실행 당시 입력과 설정을 기록해요</span></div>
+  <div class="panel" id="btConditions" aria-live="polite"><p class="note">실행하면 준비구간·출처·비용·리스크 익절 적용 상태를 표시해요.</p></div>
   <div class="sec-title">결과 요약 <span class="note">전체 기간 연속 매매</span></div>
   <div class="scroll tall" data-empty="아직 결과가 없어요. 위에서 '백테스트 실행'을 누르세요."><table id="btSummary"></table></div>
   <div class="grid g-4-8">
@@ -845,6 +850,90 @@ function drawNewsChart(){
 }
 async function loadFng(){ try{ const j=await (await fetch('https://api.alternative.me/fng/?limit=8')).json(); const d=j.data[0]; const v=+d.value; $('fng').innerHTML=`<span class="${v>=55?'up':v<=45?'down':''}">${v}</span> <span style="font-size:14px">${({'Extreme Fear':'극단적 공포','Fear':'공포','Neutral':'중립','Greed':'탐욕','Extreme Greed':'극단적 탐욕'})[d.value_classification]||d.value_classification}</span>`; $('fngNote').textContent='최근 7일: '+j.data.slice(1).map(x=>x.value).join(' · '); }catch(e){ $('fng').textContent='불러오기 실패'; } }
 // ---------------- backtest ----------------
+const CALC = // Shared comparison contract. Expression evaluated by browser and local harnesses. No strategy rules.
+(() => {
+  const DAY=86400000, VERSION='wedom-comparison-1';
+  const canonical=v=>v===null||typeof v!=='object'?JSON.stringify(v):Array.isArray(v)?'['+v.map(x=>canonical(x)??'null').join(',')+']':'{'+Object.keys(v).sort().filter(k=>v[k]!==undefined).map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';
+  // SHA-256, pure JS for identical checksums in browser and restricted REPL/Node.
+  function sha256(text){
+    const enc=encodeURIComponent(text);let n=0;for(let i=0;i<enc.length;i++,n++)if(enc[i]==='%')i+=2;
+    const bytes=new Uint8Array(Math.ceil((n+9)/64)*64);let j=0;for(let i=0;i<enc.length;i++){if(enc[i]==='%'){bytes[j++]=parseInt(enc.substr(i+1,2),16);i+=2;}else bytes[j++]=enc.charCodeAt(i);}
+    const bitLen=n*8;bytes[n]=128;const hi=Math.floor(bitLen/4294967296),lo=bitLen>>>0;
+    for(let s=24,k=bytes.length-8;s>=0;s-=8,k++)bytes[k]=(hi>>>s)&255;for(let s=24,k=bytes.length-4;s>=0;s-=8,k++)bytes[k]=(lo>>>s)&255;
+    const H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+    const rr=(x,n)=>(x>>>n)|(x<<(32-n)),W=new Array(64);
+    for(let p=0;p<bytes.length;p+=64){for(let i=0;i<16;i++)W[i]=(bytes[p+i*4]<<24)|(bytes[p+i*4+1]<<16)|(bytes[p+i*4+2]<<8)|bytes[p+i*4+3];
+      for(let i=16;i<64;i++){const a=W[i-15],b=W[i-2];W[i]=(W[i-16]+(rr(a,7)^rr(a,18)^(a>>>3))+W[i-7]+(rr(b,17)^rr(b,19)^(b>>>10)))|0;}
+      let [a,b,c,d,e,f,g,h]=H;for(let i=0;i<64;i++){const t1=(h+(rr(e,6)^rr(e,11)^rr(e,25))+((e&f)^(~e&g))+K[i]+W[i])|0,t2=((rr(a,2)^rr(a,13)^rr(a,22))+((a&b)^(a&c)^(b&c)))|0;h=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0;}
+      const v=[a,b,c,d,e,f,g,h];for(let i=0;i<8;i++)H[i]=(H[i]+v[i])|0;
+    }return H.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('');
+  }
+  const hash=v=>sha256(canonical(v));
+  function prepare(raw,{start,endExclusive,ms,warmDays=45,now=Date.now()}){
+    const want=start-warmDays*DAY, map=new Map();let duplicates=0,invalid=0;
+    for(const x of raw){const b=Array.isArray(x)?{t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]}:{t:+x.t,o:+x.o,h:+x.h,l:+x.l,c:+x.c,v:+x.v};
+      if(![b.t,b.o,b.h,b.l,b.c,b.v].every(Number.isFinite)||b.c<=0||b.h<b.l){invalid++;continue;}
+      if(b.t<want||b.t+ms>=endExclusive||b.t+ms>now)continue;if(map.has(b.t))duplicates++;map.set(b.t,b);
+    }
+    const bars=[...map.values()].sort((a,b)=>a.t-b.t),warm=bars.filter(b=>b.t<start),first=bars[0]?.t??null,lastClose=bars.length?bars[bars.length-1].t+ms:null;
+    const available=first==null?0:Math.max(0,(start-first)/DAY),warmExpected=Math.ceil(warmDays*DAY/ms),missingWarm=Math.max(0,warmExpected-warm.length);
+    let missing=0;for(let i=1;i<bars.length;i++)missing+=Math.max(0,Math.round((bars[i].t-bars[i-1].t)/ms)-1);
+    const quality={warmDays,availableWarmDays:available,warmBars:warm.length,expectedWarmBars:warmExpected,missingWarmBars:missingWarm,missingBars:missing,duplicates,invalid,firstBar:first,lastClose,ready:first!=null&&first<=want,closedOnly:true,mergePolicy:'timestamp-last-wins; no interpolation'};
+    return {bars,quality};
+  }
+  function adaptStatus(PP,RK,bars,start,endExclusive,ms){
+    let total=0,valid=0,high=0;for(let i=0;i<bars.length;i++){const t=bars[i].t+ms;if(t<start||t>=endExclusive)continue;total++;const r=RK?.[i];if(r!=null&&Number.isFinite(r)){valid++;if(r>=+PP.riskHi)high++;}}
+    return {requested:!!+PP.adapt,state:!+PP.adapt?'off':!valid?'missing':valid<total?'partial':'ready',totalBars:total,inputBars:valid,highRiskBars:+PP.adapt?high:0,coveragePct:total?valid/total*100:0,riskHi:+PP.riskHi};
+  }
+  function build({bars,start,endExclusive,ms,PP,compound,source,engineSource,RK=null,mode=2,quality,slippage=0}){
+    const params={...PP,mode};const b=bars.map(x=>[x.t,x.o,x.h,x.l,x.c,x.v]);const rk=Array.isArray(RK)?RK:null;
+    return {contract:VERSION,source,decisionTime:'bar.openTime + timeframe',bounds:'start <= decisionTime < endExclusive',start,endExclusive,timeframeMs:ms,capital:+PP.capital,compound:!!compound,feePct:+PP.fee,slippagePct:slippage,funding:'not modelled',mode,parameters:params,quality,adapt:adaptStatus(PP,RK,bars,start,endExclusive,ms),hashes:{algorithm:'SHA-256',engine:hash(engineSource),parameters:hash(params),bars:hash(b),risk:hash(rk)}};
+  }
+  return {VERSION,DAY,canonical,sha256,hash,prepare,adaptStatus,build};
+})()
+;
+// Comparison metadata only. Does not change DEF, strategy functions, or frozen ledgers.
+const calcEsc=x=>String(x??'').replace(/[&<>"']/g,z=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[z]));
+const calcTime=t=>Number.isFinite(t)?new Date(t+KST).toISOString().slice(0,16).replace('T',' '):'미확인';
+function calcEngineSource(){const code=[...document.querySelectorAll('script:not([src])')].map(s=>s.textContent||'').find(s=>s.includes('// ---------------- indicators'))||'';return code.slice(code.indexOf('// ---------------- indicators'),code.indexOf('// ---------------- charts'))+'\nEXECUTED_RUN_STRATEGY\n'+runStrategy.toString();}
+function calcRiskInput(bars,tf,PP,macro=D.macro||null){return +PP.adapt?riskBars(bars,tf,macro):null;}
+function calcManifest(bars,quality,st,end,tf,PP,compound,src,mode,RK){return CALC.build({bars,quality,start:st,endExclusive:end,ms:tf,PP,compound,source:src,engineSource:calcEngineSource(),RK,mode,slippage:0});}
+function calcAdaptText(a){
+  if(a.state==='off')return '꺼짐 (설정 OFF)';
+  if(a.state==='missing')return '설정 ON · 리스크 입력 없음 → 일반 익절';
+  return `설정 ON · 입력 ${a.state==='partial'?'일부':'있음'} (${fmt(a.coveragePct,1)}%) · 짧은 익절 조건 ${a.highRiskBars}봉`;
+}
+function calcManifestHTML(m,title='연속 실행'){
+  const q=m.quality,a=m.adapt,warn=[];
+  if(!q.ready)warn.push('45일 준비구간 부족: 이 결과는 실행하지 않았어요.');
+  if(q.missingWarmBars)warn.push(`준비구간 누락 ${q.missingWarmBars}봉`);
+  if(q.missingBars)warn.push(`입력 내 누락 ${q.missingBars}봉 (보간 안 함)`);
+  if(q.duplicates)warn.push(`중복 ${q.duplicates}봉, 같은 시각은 마지막 입력 사용`);
+  if(q.invalid)warn.push(`잘못된 입력 ${q.invalid}봉 제외`);
+  if(a.requested&&a.state==='missing')warn.push('익절 규칙은 켰지만 리스크 데이터가 없어 일반 익절로 계산했어요.');
+  if(a.state==='partial')warn.push('리스크 입력이 없는 봉에는 일반 익절이 적용돼요.');
+  if(m.regimePolicy)warn.push('횡보장 구간의 추세 판정: '+m.regimePolicy);
+  const pp=Object.entries(m.parameters).map(([k,v])=>`${k}=${v}`).join(' · ');
+  const json=calcEsc(JSON.stringify(m,null,2));
+  return `<article class="calc-result"><div class="calc-title">${calcEsc(title)} · ${calcEsc(m.source)}</div><div class="calc-grid"><div><b>결정 시각 (KST)</b><span>${calcTime(m.start)} 이상 ~ ${calcTime(m.endExclusive)} 미만<br>마지막 확정봉 종료 ${calcTime(q.lastClose)}</span></div><div><b>준비구간</b><span>${q.warmDays}일 요청 · ${fmt(Math.min(q.availableWarmDays,q.warmDays),1)}일 확보 · ${q.ready?'시작 범위 확보':'부족'}</span></div><div><b>자금 · 비용</b><span>$${fmt(m.capital,0)} · ${m.compound?'복리':'시작 자금 고정'} · 편도 수수료 ${m.feePct}%<br>슬리피지 ${m.slippagePct}% · 펀딩 미반영</span></div><div><b>리스크 적응 익절</b><span>${calcAdaptText(a)}</span></div></div>${warn.length?`<p class="warn calc-warning">${warn.map(calcEsc).join('<br>')}</p>`:''}<details class="fold plain"><summary>실행 조건 · SHA-256 해시 펼쳐보기</summary><div class="calc-detail"><p>기준 ${calcEsc(m.contract)} · ${m.timeframeMs/60000}분봉 · v${m.mode}<br>의사결정 시각 = 봉 시작 + 봉 길이. 종료 시각은 포함하지 않아요.</p><div class="calc-hashes">${Object.entries(m.hashes).filter(([k])=>k!=='algorithm').map(([k,v])=>`<div>${calcEsc(k)}<code>${calcEsc(v)}</code></div>`).join('')}</div><p class="calc-params">실제 매개변수: ${calcEsc(pp)}</p><details><summary>전체 실행 기록(JSON)</summary><pre>${json}</pre></details></div></details></article>`;
+}
+function renderCalcConditions(){
+  const el=$('btConditions');if(!el)return;
+  if(!BT){el.innerHTML='<p class="note">백테스트를 실행하면 실제로 사용한 데이터 출처·기간·준비구간·비용·익절 적용 상태와 체크섬을 여기에 남겨요.</p>';return;}
+  let html='';for(const sym of BT.syms){const it=BT.items[sym];if(!it)continue;const ms=Object.values(it.conditions||{});html+=ms.map(m=>calcManifestHTML(m,`${NAME[sym]} · ${MODEN[m.mode]}`)).join('');if(it.err)html+=`<p class="warn">${calcEsc(it.err)}</p>`;
+    const segs=it.segs||[];if(segs.length){html+=`<details class="fold"><summary>횡보장 ${segs.length}개 구간의 개별 실행 조건</summary><div class="fold-body">${segs.map(s=>Object.values(s.conditions||{}).map(m=>calcManifestHTML(m,calcTime(s.st)+' ~ '+calcTime(s.en))).join('')).join('')}</div></details>`;}
+    if(it.skippedSegments)html+=`<p class="warn">45일 준비구간이 부족한 횡보장 ${it.skippedSegments}개 구간은 계산에서 제외했어요.</p>`;
+  }el.innerHTML=html;
+}
+function calcLedgerNotice(){
+  const el=$('ledgerCalcNotice');if(!el)return;
+  if(!LEDGER||LEDGER.err){el.textContent='기존 장부는 버전별 동결 규칙과 시작 시각을 유지해요.';return;}
+  const cur=LEDGER.versions.find(v=>v.info.v===LEDGER.current);const i=cur?.info;
+  el.textContent=`장부 ${i?.v||''}: 시작 ${i?.startKST||'미확인'} KST · 15분봉 · 시작 자금 고정 · 45일 준비 · ${['v1','v2'].includes(i?.v)?'리스크 익절 설정 ON, 거시 입력 없음(일반 익절).':'리스크 정책은 버전 기록을 참고하세요.'} 사이트 모의 계좌·백테스트와 시작 시각, 봉, 복리, 출처, 입력이 다르면 수익률도 달라요. v1·v2 동결 파일은 바꾸지 않았어요.`;
+}
+
+
 const BT_SRC = {
   BTCUSDT: [['binanceF', Date.UTC(2019,8,8)], ['binanceS', Date.UTC(2017,7,17)], ['bitstamp', Date.UTC(2011,8,13)]],
   ETHUSDT: [['binanceF', Date.UTC(2019,10,27)], ['binanceS', Date.UTC(2017,7,17)], ['coinbase', Date.UTC(2016,4,18)]],
@@ -852,7 +941,7 @@ const BT_SRC = {
 };
 const SRCNAME = {binanceF:'바이낸스 선물', binanceS:'바이낸스 현물', bitstamp:'비트스탬프 현물', coinbase:'코인베이스 현물'};
 const BT_PAIR = {bitstamp:{BTCUSDT:'btcusd',ETHUSDT:'ethusd',XRPUSDT:'xrpusd'}, coinbase:{BTCUSDT:'BTC-USD',ETHUSDT:'ETH-USD',XRPUSDT:'XRP-USD'}};
-const WARM = 8*86400e3;
+const WARM = 45*86400e3;
 const sleepMs = ms => new Promise(r=>setTimeout(r,ms));
 const idb = (()=>{ let dbp=null; const open=()=>dbp||(dbp=new Promise((res,rej)=>{ try{ const r=indexedDB.open('wedomBT',1); r.onupgradeneeded=()=>r.result.createObjectStore('m'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }catch(e){ rej(e); } }));
   const op=(mode,fn)=>open().then(db=>new Promise(res=>{ try{ const tx=db.transaction('m',mode); const st=tx.objectStore('m'); const q=fn(st); tx.oncomplete=()=>res(q&&q.result); tx.onerror=()=>res(undefined); }catch(e){ res(undefined); } })).catch(()=>undefined);
@@ -924,17 +1013,22 @@ function sidewaysSegments(daily, PP, minDays, box){
   if(cur){ cur.next='진행 중'; segs.push(cur); }
   return segs.map(s=>({...s, days:(s.e-s.s)/86400e3+1})).filter(s=>s.days>=minDays);
 }
-function runSegments(sym, bars, tf, modes, REGD, opt){
-  const segs=sidewaysSegments(REGD, P, opt.minDays, opt.box); const rows=[];
-  const bs=t=>{ let lo=0,hi=bars.length; while(lo<hi){ const m=(lo+hi)>>1; if(bars[m].t<t) lo=m+1; else hi=m; } return lo; };
-  for(const sg of segs){ const st=sg.s+86400e3, en=Math.min(sg.e+2*86400e3-1, opt.end); if(en<=st) continue; const i0=bs(st-10*86400e3), i1=bs(en+tf);
-    const sb=bars.slice(i0,i1); if(sb.length<200 || sb[0].t>st-2*86400e3) continue; const seg=sb.filter(b=>b.t>=st&&b.t<en); if(seg.length<50) continue;
-    const sh1=agg(sb,H1), F=featuresBars(sb,sh1,tf), BX=boxBars(sb,sh1,tf,+P.boxN), RG = opt.def ? regimeBars(sb,sh1,tf,{...P,trend:1}) : new Array(sb.length).fill(0);
-    const hi=Math.max(...seg.map(b=>b.h)), lo=Math.min(...seg.map(b=>b.l)); const row={...sg, st, en, range:(hi/lo-1)*100, bh:(seg[seg.length-1].c/seg[0].o-1)*100, res:{}};
-    for(const m of modes){ const r=runStrategy(m,{sym, base:sb, h1:sh1, ms:tf, st, en, compound:false, eqStep:Math.max(1,Math.floor(sb.length/400)), BX, RG}, F, P); const cut=st+(en-st)*0.8; const ea=r.eq.filter(p=>p.t<=cut);
-      row.res[m]={ret:(r.equity/P.capital-1)*100, mdd:r.mdd, n:r.trades.length, late: ea.length? (r.equity-ea[ea.length-1].v)/P.capital*100 : 0}; }
-    rows.push(row); }
-  return rows; }
+function runSegments(sym,bars,tf,modes,REGD,opt,PP=P,src='미확인',macro=D.macro||null){
+  const segs=sidewaysSegments(REGD,PP,opt.minDays,opt.box),rows=[];let skipped=0;
+  const bs=t=>{let lo=0,hi=bars.length;while(lo<hi){const m=(lo+hi)>>1;if(bars[m].t<t)lo=m+1;else hi=m;}return lo;};
+  for(const sg of segs){
+    const st=sg.s+86400e3,en=Math.min(sg.e+2*86400e3-1,opt.end);if(en<=st)continue;
+    const raw=bars.slice(bs(st-WARM),bs(en+1)),prepared=CALC.prepare(raw,{start:st,endExclusive:en+1,ms:tf,warmDays:45});
+    const sb=prepared.bars;if(!prepared.quality.ready){skipped++;continue;}const seg=sb.filter(b=>b.t+tf>=st&&b.t+tf<=en);if(seg.length<50)continue;
+    const sh1=agg(sb,H1),F=featuresBars(sb,sh1,tf),BX=boxBars(sb,sh1,tf,+PP.boxN),actualPP={...PP,trend:opt.def?1:0},RG=opt.def?regimeBars(sb,sh1,tf,actualPP):new Array(sb.length).fill(0),RK=calcRiskInput(sb,tf,actualPP,macro);
+    const hi=Math.max(...seg.map(b=>b.h)),lo=Math.min(...seg.map(b=>b.l)),row={...sg,st,en,range:(hi/lo-1)*100,bh:(seg[seg.length-1].c/seg[0].o-1)*100,res:{},conditions:{}};
+    for(const m of modes){
+      const r=runStrategy(m,{sym,base:sb,h1:sh1,ms:tf,st,en,compound:false,eqStep:Math.max(1,Math.floor(sb.length/400)),BX,RG,RK},F,actualPP),cut=st+(en-st)*0.8,ea=r.eq.filter(p=>p.t<=cut);
+      row.res[m]={ret:(r.equity/actualPP.capital-1)*100,mdd:r.mdd,n:r.trades.length,late:ea.length?(r.equity-ea[ea.length-1].v)/actualPP.capital*100:0};
+      const man=calcManifest(sb,prepared.quality,st,en+1,tf,actualPP,false,SRCNAME[src]||src,m,RK);man.regimePolicy=opt.def?'추세 필터 1번':'구간 모드의 방향 필터 비활성(RG=0)';man.hashes.regime=CALC.hash(RG);row.conditions[m]=man;
+    }rows.push(row);
+  }rows.skipped=skipped;return rows;
+}
 let btSegSym=null;
 function renderSeg(){
   if(!BT||!BT.seg){ $('btSegWrap').style.display='none'; return; } $('btSegWrap').style.display='';
@@ -945,45 +1039,55 @@ function renderSeg(){
       sum+=`<tr><td>${NAME[sym]}</td><td>${MODEN[m]}</td><td>${rows.length}</td><td>${win} (${fmt(win/rows.length*100,0)}%)</td><td>${f(srt[Math.floor(srt.length/2)])}</td><td>${f(v.reduce((a,b)=>a+b,0)/v.length)}</td><td>${f(srt[srt.length-1])}</td><td>${f(srt[0])}</td><td>${f(late)}p</td><td>${f(chain)}</td><td>${f(bhA)} / ${f(bhC)}</td></tr>`; } }
   $('btSegSum').innerHTML=sum;
   const o=BT.segOpt; const tot=BT.syms.reduce((a,s)=>a+((BT.items[s]&&BT.items[s].segs)||[]).length,0);
-  $('btSegNote').innerHTML=`BTC 일봉 장분위기 기준 횡보장 ${o.minDays}일 이상${o.box>0?' · 30일 고저폭 '+o.box+'% 미만':''}${o.def?' · 구간 안 박스 이탈 방어 켬':''} · 구간마다 $${fmt(P.capital,0)} 고정 사이즈로 새로 시작 · 구간 종료 시 보유 포지션은 평가손익 포함`;
+  $('btSegNote').innerHTML=`BTC 일봉 장분위기 기준 횡보장 ${o.minDays}일 이상${o.box>0?' · 30일 고저폭 '+o.box+'% 미만':''}${o.def?' · 구간 안 박스 이탈 방어 켬':''} · 구간마다 $${fmt(BT.cap,0)} 고정 사이즈로 새로 시작 · 구간 종료 시 보유 포지션은 평가손익 포함`;
   const syms=BT.syms.filter(s=>BT.items[s]&&BT.items[s].segs&&BT.items[s].segs.length); if(!syms.includes(btSegSym)) btSegSym=syms[0];
   seg('btSegSym', syms.map(s=>[s,NAME[s]]), btSegSym, v=>{btSegSym=v; renderSeg();});
   const rows=btSegSym? BT.items[btSegSym].segs.slice().reverse() : [];
   $('btSegTable').innerHTML='<tr><th>구간 (KST)</th><th>일수</th><th>고저폭</th><th>단순보유</th><th>다음 장분위기</th>'+BT.modes.map(m=>`<th>v${m} 수익</th><th>v${m} 막판20%</th><th>v${m} 낙폭</th><th>v${m} 거래</th>`).join('')+'</tr>'+
     rows.map(r=>`<tr><td>${new Date(r.st+KST).toISOString().slice(0,10)} ~ ${new Date(r.en+KST).toISOString().slice(0,10)}</td><td>${r.days}</td><td>${fmt(r.range,0)}%</td><td>${f(r.bh)}</td><td>${r.next}</td>`+BT.modes.map(m=>{ const x=r.res[m]; return `<td>${f(x.ret)}</td><td>${f(x.late)}p</td><td class="down">${fmt(x.mdd,0)}%</td><td>${x.n}</td>`; }).join('')+'</tr>').join('');
 }
+function calcDownloadConditions(){
+  if(!BT)return;
+  const record={recordedAt:BT.recordedAt,contract:BT.contract,start:BT.start,endExclusive:BT.end,parameters:BT.parameters,items:{}};
+  for(const sym of BT.syms){const it=BT.items[sym];record.items[sym]={error:it.err||null,conditions:it.conditions,results:Object.fromEntries(Object.entries(it.runs||{}).map(([m,x])=>[m,x.s])),skippedSegments:it.skippedSegments||0,segments:(it.segs||[]).map(x=>({start:x.st,endExclusive:x.en+1,conditions:x.conditions,results:x.res}))};}
+  const url=URL.createObjectURL(new Blob([JSON.stringify(record,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='wedom_calculation_conditions.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$('btMeta').onclick=calcDownloadConditions;
+
 async function runBacktest(){
-  const syms=[...document.querySelectorAll('.btSym:checked')].map(x=>x.value), modes=[...document.querySelectorAll('.btMode:checked')].map(x=>+x.value);
-  if(!syms.length||!modes.length){ btStatus('<span class="warn">종목과 전략을 하나 이상 골라주세요.</span>'); return; }
-  const start=Date.parse($('btStart').value+'T00:00:00+09:00'), end=Math.min(Date.parse($('btEnd').value+'T23:59:59+09:00'), Date.now());
-  if(!(end>start)){ btStatus('<span class="warn">기간을 확인해주세요.</span>'); return; }
-  const tf = +$('btTf').value, compound = $('btComp').value==='1';
-  if(tf===M5 && end-start>4*365*86400e3){ btStatus('<span class="warn">5분봉은 4년 이하 기간만 지원해요. 15분봉을 쓰거나 기간을 줄여주세요.</span>'); return; }
-  $('btRun').disabled=true; const t0=Date.now(); const out={syms, modes, tf, compound, start, end, items:{}, cap:+P.capital};
+  const syms=[...document.querySelectorAll('.btSym:checked')].map(x=>x.value),modes=[...document.querySelectorAll('.btMode:checked')].map(x=>+x.value);
+  if(!syms.length||!modes.length){btStatus('<span class="warn">종목과 전략을 하나 이상 골라주세요.</span>');return;}
+  const start=Date.parse($('btStart').value+'T00:00:00+09:00');
+  const requestedEnd=Date.parse($('btEnd').value+'T00:00:00+09:00')+86400e3,end=Math.min(requestedEnd,Date.now()+1);
+  if(!(end>start)){btStatus('<span class="warn">기간을 확인해주세요.</span>');return;}
+  const tf=+$('btTf').value,compound=$('btComp').value==='1',PP={...P};
+  const riskMacro=D.macro?JSON.parse(JSON.stringify(D.macro)):null;
+  if(tf===M5&&end-start>4*365*86400e3){btStatus('<span class="warn">5분봉은 4년 이하 기간만 지원해요. 15분봉을 쓰거나 기간을 줄여주세요.</span>');return;}
+  $('btRun').disabled=true;const t0=Date.now(),out={syms,modes,tf,compound,start,end,items:{},cap:+PP.capital,parameters:PP,contract:CALC.VERSION,recordedAt:Date.now()};
   try{
-    const segMode=$('btSeg').checked, segOpt={minDays:+$('btSegMin').value||14, box:+$('btSegBox').value||0, def:$('btSegDef').checked, end};
-    let REGD=null; if(+P.trend>=3 || segMode){ btStatus('BTC 일봉(장분위기 판별용) 불러오는 중...'); REGD=await btcDailyRange(start-220*86400e3, end); }
+    const segMode=$('btSeg').checked,segOpt={minDays:+$('btSegMin').value||14,box:+$('btSegBox').value||0,def:$('btSegDef').checked,end:end-1};
+    let REGD=null;if(+PP.trend>=3||segMode){btStatus('BTC 일봉(장분위기 판별용) 불러오는 중...');REGD=await btcDailyRange(start-220*86400e3,end);}
     for(const sym of syms){
-      const pk=pickSource(sym, start); const st = pk.clamped? Math.max(start, pk.listing+WARM) : start;
-      btStatus(`${NAME[sym]}: ${SRCNAME[pk.src]} ${tf===M5?'5분':'15분'}봉 불러오는 중...`);
-      const prog=(d,n,c)=>btStatus(`${NAME[sym]}: ${SRCNAME[pk.src]} ${tf===M5?'5분':'15분'}봉 불러오는 중 ${d}/${n}개월 (저장된 데이터 ${c}개월)`);
-      let bars; try{ bars=await loadBars(pk.src, sym, tf, st-WARM, end+tf, prog); }catch(err){ const alt=BT_SRC[sym].find(([s2,l2])=>s2!==pk.src && s2!=='binanceF' && st-WARM>=l2); if(!alt) throw err; pk.src=alt[0]; bars=await loadBars(pk.src, sym, tf, st-WARM, end+tf, prog); }
-      if(bars.length<500){ out.items[sym]={err:`${NAME[sym]} 데이터를 충분히 받지 못했어요 (${bars.length}개).`}; continue; }
-      btStatus(`${NAME[sym]}: 지표 계산 중 (${bars.length.toLocaleString()}개 봉)...`); await sleepMs(30);
-      const h1=agg(bars,H1); const F=featuresBars(bars,h1,tf); const BX=boxBars(bars,h1,tf,+P.boxN); const RG=regimeBars(bars,h1,tf,P,REGD);
-      const eqStep=Math.max(1, Math.floor(bars.length/3000));
-      const runs={};
-      for(const mode of modes){ btStatus(`${NAME[sym]}: v${mode} 전략 계산 중...`); await sleepMs(20); const r=runStrategy(mode, {sym, base:bars, h1, ms:tf, st, en:end, compound, eqStep, BX, RG}, F, P); runs[mode]={r, s:statsOf(r, out.cap), y:yearly(r.daily)}; }
-      const bhDaily=[]; let lastDay=-1, firstC=null, lastC=null, lastT=null; for(const b of bars){ const t=b.t+tf; if(t<st||t>end) continue; if(firstC==null) firstC=b.c; lastC=b.c; lastT=t; const day=Math.floor((t+KST)/86400e3); if(day!==lastDay){ bhDaily.push({t,px:b.c}); lastDay=day; } } if(lastT) bhDaily.push({t:lastT,px:lastC});
-      const bhY=new Map(); { let prev=null; const by=new Map(); for(const d of bhDaily){ const y=new Date(d.t+KST).getUTCFullYear(); if(!by.has(y)) by.set(y,{first:d,last:d}); else by.get(y).last=d; } for(const [y,o] of [...by.entries()].sort((a,b)=>a[0]-b[0])){ const s=prev?prev.last:o.first; bhY.set(y,(o.last.px/s.px-1)*100); prev=o; } }
-      let segRows=null; if(segMode && REGD && REGD.length){ btStatus(`${NAME[sym]}: 횡보장 구간별 계산 중...`); await sleepMs(20); segRows=runSegments(sym, bars, tf, modes, REGD, segOpt); }
-      out.items[sym]={segs:segRows, src:pk.src, clamped:pk.clamped && start<st, st, en:lastT, bars:bars.length, runs, bh:firstC?(lastC/firstC-1)*100:0, firstC, lastC, bhDaily, bhY};
+      const pk=pickSource(sym,start),st=pk.clamped?Math.max(start,pk.listing+WARM):start;
+      btStatus(`${NAME[sym]}: ${SRCNAME[pk.src]} ${tf===M5?'5분':'15분'}봉과 준비구간 45일 불러오는 중...`);
+      const prog=(d,n,c)=>btStatus(`${NAME[sym]}: ${SRCNAME[pk.src]} 불러오는 중 ${d}/${n}개월 (저장 데이터 ${c}개월)`);
+      let raw;try{raw=await loadBars(pk.src,sym,tf,st-WARM,end,prog);}catch(err){const alt=BT_SRC[sym].find(([s2,l2])=>s2!==pk.src&&s2!=='binanceF'&&st-WARM>=l2);if(!alt)throw err;pk.src=alt[0];raw=await loadBars(pk.src,sym,tf,st-WARM,end,prog);}
+      const prepared=CALC.prepare(raw,{start:st,endExclusive:end,ms:tf,warmDays:45}),bars=prepared.bars,quality=prepared.quality,conditions={};
+      const RK=calcRiskInput(bars,tf,PP,riskMacro);
+      for(const mode of modes)conditions[mode]=calcManifest(bars,quality,st,end,tf,PP,compound,SRCNAME[pk.src],mode,RK);
+      if(!quality.ready||bars.length<500){out.items[sym]={err:!quality.ready?`${NAME[sym]} 준비 데이터가 45일에 못 미쳐 실행하지 않았어요. 시작일이나 출처를 확인하세요.`:`${NAME[sym]} 데이터가 부족해요 (${bars.length}봉).`,conditions};continue;}
+      btStatus(`${NAME[sym]}: 지표 계산 중 (${bars.length.toLocaleString()}개 확정봉)...`);await sleepMs(20);
+      const h1=agg(bars,H1),F=featuresBars(bars,h1,tf),BX=boxBars(bars,h1,tf,+PP.boxN),RG=regimeBars(bars,h1,tf,PP,REGD),eqStep=Math.max(1,Math.floor(bars.length/3000)),runs={};
+      for(const mode of modes){conditions[mode].hashes.regime=CALC.hash(RG);conditions[mode].hashes.regimeDaily=CALC.hash(REGD);conditions[mode].riskDataAsOf=riskMacro?.updatedAt||null;conditions[mode].riskVintage="수집된 시계열 기준, 과거 공표·개정 시점 가용성 미검증";}
+      for(const mode of modes){btStatus(`${NAME[sym]}: v${mode} 전략 계산 중...`);await sleepMs(20);const r=runStrategy(mode,{sym,base:bars,h1,ms:tf,st,en:end-1,compound,eqStep,BX,RG,RK},F,PP);runs[mode]={r,s:statsOf(r,out.cap),y:yearly(r.daily)};}
+      const bhDaily=[];let lastDay=-1,firstC=null,lastC=null,lastT=null;for(const b of bars){const t=b.t+tf;if(t<st||t>=end)continue;if(firstC==null)firstC=b.c;lastC=b.c;lastT=t;const day=Math.floor((t+KST)/86400e3);if(day!==lastDay){bhDaily.push({t,px:b.c});lastDay=day;}}if(lastT)bhDaily.push({t:lastT,px:lastC});
+      const bhY=new Map();{let prev=null;const by=new Map();for(const d of bhDaily){const y=new Date(d.t+KST).getUTCFullYear();if(!by.has(y))by.set(y,{first:d,last:d});else by.get(y).last=d;}for(const [y,o]of[...by.entries()].sort((a,b)=>a[0]-b[0])){const s=prev?prev.last:o.first;bhY.set(y,(o.last.px/s.px-1)*100);prev=o;}}
+      let segRows=null;if(segMode&&REGD&&REGD.length){btStatus(`${NAME[sym]}: 횡보장별 45일 준비구간 계산 중...`);await sleepMs(20);segRows=runSegments(sym,bars,tf,modes,REGD,segOpt,PP,pk.src,riskMacro);}
+      out.items[sym]={segs:segRows,skippedSegments:segRows?.skipped||0,conditions,src:pk.src,clamped:pk.clamped&&start<st,st,en:lastT,bars:bars.length,runs,bh:firstC?(lastC/firstC-1)*100:0,firstC,lastC,bhDaily,bhY};
     }
-    out.seg=segMode; out.segOpt=segOpt;
-    BT=out; btSym=syms.find(s=>!out.items[s].err)||syms[0]; renderBT();
-    btStatus(`완료 · ${((Date.now()-t0)/1000).toFixed(1)}초 · 파라미터는 '전략 설정' 탭 값을 사용했어요 (시작 시각·전략 버전 제외).`);
-  }catch(e){ console.error(e); btStatus(`<span class="down">실패: ${e.message}</span>`); }
-  $('btRun').disabled=false;
+    out.seg=segMode;out.segOpt=segOpt;BT=out;btSym=syms.find(s=>!out.items[s]?.err)||syms[0];renderBT();renderCalcConditions();$('btMeta').disabled=false;
+    btStatus(`완료 · ${((Date.now()-t0)/1000).toFixed(1)}초 · 실행 당시 전략 설정과 계산조건을 결과에 고정했어요. 오류·준비구간 경고는 계산조건에서 확인하세요.`);
+  }catch(e){console.error(e);btStatus(`<span class="down">실패: ${calcEsc(e.message)}</span>`);}finally{$('btRun').disabled=false;}
 }
 const MODEN = {1:'v1 단타 역추세', 2:'v2 스윙 코어'};
 const pct = (x,d=1) => x==null||!isFinite(x)? '-' : `<span class="${cls(x)}">${x>=0?'+':''}${fmt(x,d)}%</span>`;
@@ -1182,7 +1286,7 @@ function renderLedger(){ const el=document.getElementById('ledgerBody'); if(!el)
   const cur=LEDGER.versions.find(v=>v.info.v===LEDGER.current); const tr=(cur&&cur.trades||[]).slice().reverse().slice(0,10);
   el.innerHTML=`<div class="scroll" style="max-height:none"><table><tr><th>버전</th><th>시작</th><th class="num">수익률</th><th class="num">최대낙폭</th><th class="num">거래 · 승률</th><th>현재 포지션</th><th class="num">같은 기간 BTC</th><th class="num">갱신</th></tr>${rows}</table></div>`+
     (tr.length? `<div class="note" style="margin:10px 0 4px">최근 확정 거래 (현재 버전)</div><div class="scroll"><table><tr><th>진입</th><th>종료</th><th>방향</th><th class="num">분할</th><th class="num">평단 → 종료</th><th class="num">손익($)</th></tr>${tr.map(t=>`<tr><td>${kst(t.openT)}</td><td>${kst(t.closeT)}</td><td><span class="pill ${t.side[0]}">${t.side==='LONG'?'롱':'숏'}</span></td><td class="num">${t.tr}</td><td class="num">${pfmt(t.avg)} → ${pfmt(t.exit)}</td><td class="num ${cls(t.pnl)}">${fmt(t.pnl)}</td></tr>`).join('')}</table></div>` : '<div class="note" style="margin-top:8px">아직 확정된 거래가 없어요. 장부는 시작 시점 이후 새로 생긴 신호로만 매매해요.</div>');
-  renderLedgerComparison(cur);
+  renderLedgerComparison(cur); calcLedgerNotice();
   if(typeof alignTables==='function') try{ alignTables(); }catch(e){} }
 async function runAll(){ for(const s of SYMS){ R[s]=simulate(s, features(s)); W[s]=wedomFor(s); } renderCards(); renderSignals(); renderActs(); drawActive(); try{ renderRegime(); }catch(e){ console.error(e); } try{ renderMacro(); }catch(e){ console.error(e); } try{ renderKpi(); }catch(e){ console.error(e); } if(LEDGER&&!LEDGER.err)renderLedger(); const liveTxt = ` · 웨돔·뉴스 ${kst(dataAt())}`;
   $('status').textContent = (SRC==='embedded' ? `저장된 차트 데이터 사용 (거래소 API 접속 불가, 마지막 갱신 ${kst(D.updatedAt)})` : `업데이트 ${kst(Date.now())} KST · ${({bybit:'바이비트',bitget:'비트겟',binance:'바이낸스'})[SRC]} 실시간 · 1분마다 자동 갱신`) + liveTxt; }
