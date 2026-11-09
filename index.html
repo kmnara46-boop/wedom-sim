@@ -144,7 +144,7 @@ details.fold.plain>.fold-body{padding:4px 0 0}
     <button data-tab="sim" class="on">모의매매</button>
     <button data-tab="cmp">웨돔 vs 모의</button>
     <button data-tab="news">뉴스</button>
-    <button data-tab="bt">백테스트</button>
+    <button data-tab="bt" style="display:none">백테스트</button>
     <button data-tab="cfg">전략 설정</button>
   </nav>
   <div class="status" id="status" title="데이터 출처와 마지막 갱신 시각">로딩 중...</div>
@@ -165,7 +165,7 @@ details.fold.plain>.fold-body{padding:4px 0 0}
     <div class="panel"><div class="panel-h"><h3>현재 신호 상태</h3><span class="note">초록 굵은 글씨 = 조건 충족</span></div><div id="signals"></div></div>
   </div>
 
-  <div class="sec-title">실시간 장부 <span class="note">시작 시점의 규칙을 고정해 앞으로의 성적만 기록 (고쳐지지 않는 기록)</span></div>
+  <div class="sec-title">두 모델 실시간 장부 <span class="note">웨돔 복제형(방어 필터 없음) vs 안정형(추세 필터 + 박스 이탈 규칙) · 앞으로의 성적만 기록</span></div>
   <div class="panel" id="ledgerPanel"><p class="note calc-guide" id="ledgerCalcNotice">기존 장부는 버전별 동결 규칙과 시작 시각을 유지해요.</p><div id="ledgerBody" class="note">장부를 불러오는 중...</div><details id="ledgerCompare" open><summary style="margin-top:14px;font-size:14px;font-weight:600;cursor:pointer">모델 손익 · 웨돔 정리 시점 비교</summary><div id="ledgerCompareBody" aria-live="polite" aria-atomic="true" style="margin-top:10px">장부를 불러오는 중...</div></details></div>
 
   <div class="sec-title">차트</div>
@@ -930,7 +930,7 @@ function calcLedgerNotice(){
   const el=$('ledgerCalcNotice');if(!el)return;
   if(!LEDGER||LEDGER.err){el.textContent='기존 장부는 버전별 동결 규칙과 시작 시각을 유지해요.';return;}
   const cur=LEDGER.versions.find(v=>v.info.v===LEDGER.current);const i=cur?.info;
-  el.textContent=`장부 ${i?.v||''}: 시작 ${i?.startKST||'미확인'} KST · 15분봉 · 시작 자금 고정 · 45일 준비 · ${['v1','v2'].includes(i?.v)?'리스크 익절 설정 ON, 거시 입력 없음(일반 익절).':'리스크 정책은 버전 기록을 참고하세요.'} 사이트 모의 계좌·백테스트와 시작 시각, 봉, 복리, 출처, 입력이 다르면 수익률도 달라요. v1·v2 동결 파일은 바꾸지 않았어요.`;
+  el.textContent=`두 모델 모두 15분봉 · 시작 자금 고정 · 최대 배율 1배 · 같은 신호 엔진이에요. 차이는 방어 필터(추세 필터·박스 이탈 규칙 L) 유무뿐이에요. 리스크 적응 익절은 거시 입력이 없어 일반 익절로 계산돼요. 아래 웨돔 비교는 ${i?.name||i?.v||''} 기준이에요. 예전 장부 v1은 운영을 끝냈고 기록만 보관해요.`;
 }
 
 
@@ -1261,7 +1261,7 @@ function renderLedgerComparison(v){
   const wlast=c.wedom.at(-1), mlast=c.model.at(-1);
   const at=a=>a?`${kst(a.t)} ${a.side==='LONG'?'롱':'숏'} ${esc(a.label)}`:'기간 내 기록 없음';
   const stale=Date.now()-s.updatedAt>3600000;
-  el.innerHTML=`<div class="note cmp-period">공통 관찰 구간: ${esc(v.info.startKST)} ~ ${c.to?kst(c.to):'계산 대기'} KST · 장부 ${esc(v.info.v)}${stale?' <span class="warn">장부 갱신 1시간 이상 지연</span>':''}${s.mismatch?' <span class="warn">재계산 불일치: '+Number(s.mismatch)+'</span>':''}<br>웨돔 자료 갱신: ${D.updatedAt?kst(D.updatedAt):'미확인'} KST</div>
+  el.innerHTML=`<div class="note cmp-period">공통 관찰 구간: ${esc(v.info.startKST)} ~ ${c.to?kst(c.to):'계산 대기'} KST · ${esc(v.info.name||v.info.v)} 장부${stale?' <span class="warn">장부 갱신 1시간 이상 지연</span>':''}${s.mismatch?' <span class="warn">재계산 불일치: '+Number(s.mismatch)+'</span>':''}<br>웨돔 자료 갱신: ${D.updatedAt?kst(D.updatedAt):'미확인'} KST</div>
   <div class="cmp-grid">
     <section class="cmp-col" aria-label="모델 장부 비교"><h3>모델 장부 <span class="note">고정 규칙 · 모의매매</span></h3>
       <div class="cmp-metrics"><div><span class="note">실현손익 (수수료 차감)</span><strong>${dollars(c.realized)}</strong></div><div><span class="note">미실현손익</span><strong>${dollars(c.unr)}</strong></div></div>
@@ -1282,7 +1282,7 @@ function renderLedger(){ const el=document.getElementById('ledgerBody'); if(!el)
   if(!LEDGER||LEDGER.err){ document.getElementById('ledgerCompareBody').textContent='장부 데이터를 불러오지 못했어요.'; el.innerHTML='<span class="mute">장부는 클라우드 사이트(GitHub)에서 10분마다 계산돼요. 이 화면에서는 불러오지 못했어요.</span>'; return; }
   const rows=LEDGER.versions.map(v=>{ const s=v.state, i=v.info; if(!s) return `<tr><td>${i.v}</td><td>${i.startKST}</td><td colspan="6" class="mute">${v.status||v.error||'-'}</td></tr>`;
     const pos=s.pos? `<span class="pill ${s.pos.side[0]}">${s.pos.side==='LONG'?'롱':'숏'} ${s.pos.tr}차</span> 평단 ${pfmt(s.pos.avg)} · 미실현 <span class="${cls(s.pos.unr)}">${fmt(s.pos.unr)}</span>` : '<span class="mute">포지션 없음</span>';
-    return `<tr><td><b>${i.v}</b>${i.v===LEDGER.current?' <span class="pill">현재</span>':''}</td><td>${i.startKST} KST</td><td class="num ${cls(s.ret)}">${s.ret>=0?'+':''}${fmt(s.ret)}%</td><td class="num">${fmt(s.mdd,1)}%</td><td class="num">${s.trades}${s.winRate!=null?' · '+fmt(s.winRate,0)+'%':''}</td><td>${pos}</td><td class="num ${cls(s.btcRet)}">${s.btcRet>=0?'+':''}${fmt(s.btcRet)}%</td><td class="num mute">${kst(s.updatedAt)}${s.mismatch?' <span class="warn">재계산 불일치 '+s.mismatch+'</span>':''}</td></tr>`; }).join('');
+    return `<tr><td><b>${i.name||i.v}</b> <span class="mute">${i.v}</span></td><td>${i.startKST} KST</td><td class="num ${cls(s.ret)}">${s.ret>=0?'+':''}${fmt(s.ret)}%</td><td class="num">${fmt(s.mdd,1)}%</td><td class="num">${s.trades}${s.winRate!=null?' · '+fmt(s.winRate,0)+'%':''}</td><td>${pos}</td><td class="num ${cls(s.btcRet)}">${s.btcRet>=0?'+':''}${fmt(s.btcRet)}%</td><td class="num mute">${kst(s.updatedAt)}${s.mismatch?' <span class="warn">재계산 불일치 '+s.mismatch+'</span>':''}</td></tr>`; }).join('');
   const cur=LEDGER.versions.find(v=>v.info.v===LEDGER.current); const tr=(cur&&cur.trades||[]).slice().reverse().slice(0,10);
   el.innerHTML=`<div class="scroll" style="max-height:none"><table><tr><th>버전</th><th>시작</th><th class="num">수익률</th><th class="num">최대낙폭</th><th class="num">거래 · 승률</th><th>현재 포지션</th><th class="num">같은 기간 BTC</th><th class="num">갱신</th></tr>${rows}</table></div>`+
     (tr.length? `<div class="note" style="margin:10px 0 4px">최근 확정 거래 (현재 버전)</div><div class="scroll"><table><tr><th>진입</th><th>종료</th><th>방향</th><th class="num">분할</th><th class="num">평단 → 종료</th><th class="num">손익($)</th></tr>${tr.map(t=>`<tr><td>${kst(t.openT)}</td><td>${kst(t.closeT)}</td><td><span class="pill ${t.side[0]}">${t.side==='LONG'?'롱':'숏'}</span></td><td class="num">${t.tr}</td><td class="num">${pfmt(t.avg)} → ${pfmt(t.exit)}</td><td class="num ${cls(t.pnl)}">${fmt(t.pnl)}</td></tr>`).join('')}</table></div>` : '<div class="note" style="margin-top:8px">아직 확정된 거래가 없어요. 장부는 시작 시점 이후 새로 생긴 신호로만 매매해요.</div>');
